@@ -2,7 +2,7 @@
 
 `Amethyst` is the first AI-native language and IDE to build composite agents. 
 
-It optimizes human happiness by abstracting complexity. We're taking the "English is the next programming language" to its logical conclusion.
+It optimizes human happiness by hiding complexity. We're taking the "English is the next programming language" to its logical conclusion.
 
 Internally, Amethyst takes care of reliability, accuracy (multiple agents) and provides enterprise level scale, so that builders don't have to write explicit code for them. It's inspired by the principles of Ruby and uses convention over configuration choices in many places to keep the developer experience simple.
 
@@ -12,17 +12,17 @@ This doc is a whitepaper and outlines the vision and specs. The code will follo
 
 ### Who is Amethyst For
 Amethyst is for 2 user groups:
-* **Consumers** – non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their home, etc. They will see a very simple GUI IDE. 
-* **Developers** – technical or enterprise users who want to build sophisticated large scale agentic applications. They will get advanced tools for debugging, observability, deploying and managing globally at scale.
+* **Consumers** – non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their home, etc. They will get a very simple GUI editor that works on all devices. 
+* **Developers** – technical or enterprise users who want to build sophisticated large scale agentic applications. They will get advanced IDE and tools for debugging, observability, deploying and managing globally at scale.
 
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
-* Crew.ai solves the cruicial accuracy problem, but requires devs to write a lot of code. Not for consumers.
+* Crew.ai, MetaGPT, etc. solve the cruicial accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write Python when you can just talk to the AI?*
 * Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. (Sorry, Langchain, you're still the OG!)
 * Zapier AI Agent editor is too simplistic, doesn't offer code-like composability or debugging.
 * Lindy.ai, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases.
 
-We've tried our hand at building two agent frameworks here at Fask – one workflow-based and one GUI – and we still don't like what we built.
+We've used several agent frameworks and tried our hand at building two frameworks here at Fask – one workflow-based and one GUI – and we still don't like what we built.
 
 At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor, and sub-workflows often looping back on each other. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
@@ -71,13 +71,13 @@ Or execute the code in `1-click` right from the Amethyst IDE.
 
 That's it! The agents will do all the tasks, and you'll get an email with all the details for your day trip.
 
-This may seem magical in July-2025 (at the time of writing), but we believe will be the obvious way to build and scale agents very soon.
+We believe will be the obvious way to talk to and scale agents in the near future.
 
 #### What's Happening Under the Hood
 
 The file is compiled by the Amethyst Compiler and is converted to Python code.
 
-> 🤨 Note: We didn't choose Ruby for practical reasons. Python currently has extensive support for LLM and Agent ops. And let's be honest – it doesn't have to be Ruby to *feel like* Ruby. 
+> 🧐 Note: We didn't choose Ruby for practical reasons. Python currently has extensive support for LLM and Agent ops. And let's be honest – it doesn't have to be Ruby to *feel like* Ruby. 
 
 #### Environments
 Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `browser`, `docker container`, `raspberry pi` etc. You can extend environments to create your own. This is very similar to extending a docker image.
