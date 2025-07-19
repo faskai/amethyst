@@ -24,7 +24,7 @@ Current multi-agent frameworks are great but still too complex.
 
 We've used several agent frameworks and tried our hand at building two frameworks here at Fask – one workflow-based and one GUI – and we still don't like what we built.
 
-At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor, and sub-workflows often looping back on each other. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
+At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
 We prefer composable code over GUI workflows. Composable code, i.e., primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose more complex "composite" `blocks` – i.e., applications – which are also easy to test, maintain and scale. `blocks` all the way down!
 
@@ -99,7 +99,7 @@ end day_planner
 You can also import resources (tools and agents) from other repositories (packages). Think of this as defining a `package.json` file in JS/TS. Amethyst will provide a package manager like `npm` or `pip`.
 
 When writing a class (.amt) you can import these resources:
-* [No code] Both consumers and devs can use the GUI IDE to find and simply select the tools and agents they would like to add. If connecting with an external app you'll have to provide OAuth permission (standard sign in flow).
+* [No code] Both consumers and devs can use the GUI IDE to find and simply select the tools and agents they would like to add from a global repo. If connecting with an external app you'll have to provide OAuth permission (standard sign in flow).
 * [Low code] Devs can also import via code like `use company_name/package_name` and set the API keys in `.env`.
 
 These imported resources may run locally or remotely (using **MCP** and **A2A** protocols).
@@ -130,6 +130,7 @@ As with any programming language there will be more docs and features aound:
 * Details on how to publish packages and importing from external repos.
 * Looping: `Do until` condition is met within agents. *P.S. Aren't agents just big while loops with unreadable code?*
 * Debugging agents – Amethyst IDE will provide breakpoints where you can step through each line of code or whole `block`.
+* Seamless code gen – Just type or talk freely, and the IDE will automatically edit-in syntaxes, correct tool and agent names.
 * Deploying, monitoring, scaling.
 
 Advanced agentic features coming soon (ish):
