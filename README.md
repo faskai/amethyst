@@ -2,7 +2,7 @@
 
 `Amethyst` is the first AI-native language and IDE to build composite agents. 
 
-It optimizes human happiness by hiding complexity. We're taking the "English is the next programming language" to its logical conclusion.
+It optimizes human happiness by hiding complexity. We're taking "English is the next programming language" to its logical conclusion.
 
 Internally, Amethyst takes care of reliability, accuracy (multiple agents) and provides enterprise level scale, so that builders don't have to write explicit code for them. It's inspired by the principles of Ruby and uses convention over configuration choices in many places to keep the developer experience simple.
 
@@ -18,7 +18,7 @@ Amethyst is for 2 user groups:
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
 * Crew.ai, MetaGPT, etc. solve the cruicial accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write Python when you can just talk to the AI?*
-* Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. (Sorry, Langchain, you're still the OG!)
+* Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. *(Sorry, Langchain, you're still the OG!)*
 * Zapier AI Agent editor is too simplistic, doesn't offer code-like composability or debugging.
 * Lindy.ai, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases.
 
@@ -26,7 +26,9 @@ We've used several agent frameworks and tried our hand at building two framework
 
 At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
-We prefer composable code over GUI workflows. Composable code, i.e., primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose more complex "composite" `blocks` – i.e., applications – which are also easy to test, maintain and scale. `blocks` all the way down!
+We prefer composable code over GUI workflows. Primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose more complex, "composite" `blocks` – i.e., applications – which are also easy to test, maintain and scale. *`blocks` all the way down!*
+
+Composition uses abstractions. Good abstractions help us build complexity without making things complicated. 
 
 Amethyst is the better solution for agent development. Its code reads like plain English, is composable like Ruby and Python (without workflows), and performs powerful tasks under the hood, such as async processing and managing multiple agents.
 
@@ -80,9 +82,9 @@ The file is compiled by the Amethyst Compiler and is converted to Python code.
 > 🧐 Note: We didn't choose Ruby for practical reasons. Python currently has extensive support for LLM and Agent ops. And let's be honest – it doesn't have to be Ruby to *feel like* Ruby. 
 
 #### Environments
-Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `browser`, `docker container`, `raspberry pi` etc. You can extend environments to create your own. This is very similar to extending a docker image.
+Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `Browser`, `Docker Container`, `Raspberry Pi`, etc. You can extend environments to create your own. This is very similar to extending a docker image.
 
-You can define tools (like functions) and agents (like classes) in an application by creating/editing new `.amt` (amethyst) files:
+You can define tools (analogous to functions) and agents (analogous to classes) in an application by creating/editing new `.amt` (amethyst) files:
 
 example_file.amt:
 ```
