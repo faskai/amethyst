@@ -1,17 +1,36 @@
-## Amethyst
+## Amethyst AI
 
-`Amethyst` is a minimalistic language and IDE to build AI agents. It optimizes human happiness by abstracting complexity. Internally, it takes care of reliability, accuracy (multiple agents) and provides enterprise level scale, so that developers don't have to write explicit code for them. It's inspired by the principles of Ruby and uses convention over configuration choices in many places to keep the developer experience simple.
+`Amethyst` is the first AI-native language and IDE to build composite agents. 
+
+It optimizes human happiness by abstracting complexity. We're taking the "English is the next programming language" to its logical conclusion.
+
+Internally, Amethyst takes care of reliability, accuracy (multiple agents) and provides enterprise level scale, so that builders don't have to write explicit code for them. It's inspired by the principles of Ruby and uses convention over configuration choices in many places to keep the developer experience simple.
+
+This doc is a whitepaper and outlines the vision and specs. The code will follow soon.
+
+<img src="/Amethyst.jpg" width="50%" height="50%">  
+
+### Who is Amethyst For
+Amethyst is for 2 user groups:
+* **Consumers** – non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their home, etc. They will see a very simple GUI IDE. 
+* **Developers** – technical or enterprise users who want to build sophisticated large scale agentic applications. They will get advanced tools for debugging, observability, deploying and managing globally at scale.
 
 ### Why Amethyst
-Current multi-agnet frameworks are great but still too complex.
-* Crew.ai requires devs to write a lot of python code.
-* Langchain is overly configurable and kind of messy.
-* We prefer composable code over GUI workflows. Lindy.ai, Zapier, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get convoluted pretty fast for complex processes. In my experience, composable code, i.e., primitive building `blocks` are much easier to test, maintain and scale; and can be used to compose more complex applications, i.e., composite `blocks` – which are also easy to test, maintain and scale. `blocks` all the way down!
+Current multi-agent frameworks are great but still too complex.
+* Crew.ai solves the cruicial accuracy problem, but requires devs to write a lot of code. Not for consumers.
+* Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. (Sorry, Langchain, you're still the OG!)
+* Zapier AI Agent editor is too simplistic, doesn't offer code-like composability or debugging.
+* Lindy.ai, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases.
 
+We've tried our hand at building two agent frameworks here at Fask – one workflow-based and one GUI – and we still don't like what we built.
 
-Amethyst code reads like plan english, is composable like Ruby and Python (no workflows) and does a lot of powerfull stuff under the hood, like parallel processing, multiple agents, etc.
+At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor, and sub-workflows often looping back on each other. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
-Here's a sample "code" block:
+We prefer composable code over GUI workflows. Composable code, i.e., primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose more complex "composite" `blocks` – i.e., applications – which are also easy to test, maintain and scale. `blocks` all the way down!
+
+Amethyst is the better solution for agent development. Its code reads like plain English, is composable like Ruby and Python (without workflows), and performs powerful tasks under the hood, such as async processing and managing multiple agents.
+
+Here's a sample "code":
 #### Agent 1 – day_planner
 File day_planner.amt:
 > agent day_planner
@@ -22,28 +41,29 @@ Plan a day dependeing on the weather. Check weather from `@get_weather`.
 `task b` Plan todo, things to carry and pack using `@todoist`
 `await a` `await b`
 Send `@email` with the final plan
-end day_planner
+end agent
 
 
-In this block:
-* An `agent` is essentially a `block` of code (instructions). They're the same thing, and you can call them either.
+In this example:
+* An `agent` is composed of a `block` of code (instructions).
 * Tools:  `get_weather` is a tool.
 * Agents: `all_trails`, `open_table` are agents provided by AllTrails, and OpenTable respectively. `browse_agent` is a general browser use agent that can open up the browser, navigate sites and perform actions such as book parking. `email` is an email agent that can read and send emails. `@todoist` manages todo lists.
+* Each line will be executed one-by-one by the agent. We will also support multi-line blocks.
 * Syntax:
   * Typical `if`, `else` blocks used in programming.
-  * `task {task_name}` is an async `block` of code. By default they're fire and forget. If used like `await task_name` the program blocks until the task is done.
+  * `task {task_name}` is an **async** `block` of code. By default they're fire and forget. If used like `await task_name` the program blocks until the task is done.
   * They're all case insensitive.
 
 #### Agent 2 – all_trails
 > Find trails from description using `@find_trails`. Verify using `@all_trails_verifier`.
-##### Agent 2.2 – all_trails_verifier (Optional)
-> Verify that the trail matches the extact metrics such as length, elevation gain, etc., and description such as views.
+##### Agent 2.1 – all_trails_verifier (Optional)
+> Verify that the trail matches the exact metrics such as length, elevation gain, etc., and description such as "lookout views".
 
-Agent 2.2 shows how multiple agents can be used to review each other in a single block or task for accuracy. This is important for enterprise workflows, such as financial accounting.
+Agent 2.1 shows how multiple agents can be used to review each other in a single block for accuracy. This could be important for enterprise workflows, such as financial accounting. We believe that in future this too will be abstracted within LLM providers, and developers won't have to do this explicitly.
 
-And so on... (other agents not described for brevity)
+And so on... (other agents not described for brevity).
 
-Use it like this in a chat thread:
+Use the new agent like this in a chat thread:
 
 > Plan my saturday `@day_planner`
 
@@ -51,26 +71,24 @@ Or execute the code in `1-click` right from the Amethyst IDE.
 
 That's it! The agents will do all the tasks, and you'll get an email with all the details for your day trip.
 
-This seems like magic in July-2025 (at the time of writing), but I'm pretty sure this will be the obvious way to build and scale agents very soon.
+This may seem magical in July-2025 (at the time of writing), but we believe will be the obvious way to build and scale agents very soon.
 
 #### What's Happening Under the Hood
 
-The `block` (i.e. `agent`) is compiled by the Amethyst Compiler and is converted to Python code.
+The file is compiled by the Amethyst Compiler and is converted to Python code.
 
 > 🤨 Note: We didn't choose Ruby for practical reasons. Python currently has extensive support for LLM and Agent ops. And let's be honest – it doesn't have to be Ruby to *feel like* Ruby. 
 
 #### Environments
-Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `browser`, `docker container`, `raspberry pi` etc.
+Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `browser`, `docker container`, `raspberry pi` etc. You can extend environments to create your own. This is very similar to extending a docker image.
 
-You can extend environments to create your own. This is very similar to extending a docker image.
-
-You can define tools and agents (like classes) in an application by creating/editing new `.amt` (amethyst) files:
+You can define tools (like functions) and agents (like classes) in an application by creating/editing new `.amt` (amethyst) files:
 
 example_file.amt:
 ```
 tool get_weather
 {
-    # JSON schema of tool
+  # JSON schema of tool
 }
 
 agent day_planner
@@ -80,7 +98,10 @@ end day_planner
 
 You can also import resources (tools and agents) from other repositories (packages). Think of this as defining a `package.json` file in JS/TS. Amethyst will provide a package manager like `npm` or `pip`.
 
-When writing a class (.amt) you can import these resources like `use company_name/package_name`.
+When writing a class (.amt) you can import these resources:
+* [No code] Both consumers and devs can use the GUI IDE to find and simply select the tools and agents they would like to add. If connecting with an external app you'll have to provide OAuth permission (standard sign in flow).
+* [Low code] Devs can also import via code like `use company_name/package_name` and set the API keys in `.env`.
+
 These imported resources may run locally or remotely (using **MCP** and **A2A** protocols).
 
 You can also configure the LLM model per agent (GPT-4o, etc.).
@@ -96,15 +117,31 @@ end campsite_finder
 
 Depending on the environment some agents / tools may not be compatible. E.g., you cannot run a `browse_agent` on a `raspberry pi`. The compiler should throw error if this happens.
 
+The agent may get stuck sometimes and ask for user help, such as login or anti-AI captcha. Amethyst will make sure the program resumes from that point.
+
+#### Bundled Resources
+Amethyst will include a library of common tools and agents such as `@execute_code`, `@date_time`, etc. You can expect all common utilities that a programing language provides.
+
 
 #### Coming Soon
-As with any programming language there will be more details aound:
-* Testing (tools, tasks, agents)
-* Details on how to publish packages and importing from external repos
-* `Loop until` condition is met within agents
-* Debugging agents
-* Deploying, monitoring, scaling
+As with any programming language there will be more docs and features aound:
+* Error handling. By default Amethyst errors will be thrown with full details up the stack. Agents may try/catch them.
+* Testing (tools, tasks, agents).
+* Details on how to publish packages and importing from external repos.
+* Looping: `Do until` condition is met within agents. *P.S. Aren't agents just big while loops with unreadable code?*
+* Debugging agents – Amethyst IDE will provide breakpoints where you can step through each line of code or whole `block`.
+* Deploying, monitoring, scaling.
 
-Agent-specific features:
-* Inputs and triggers - what starts an agent? Chat message (UI), API call, webhook, etc.
-* Live multimodal agents - Agents that run continuously and can see, hear by processing a stream of data (audio, video, XR)
+Advanced agentic features coming soon (ish):
+* Inputs and triggers – what starts an agent? Chat message (on UI), API call, webhook, etc.
+* Live multimodal agents - Agents that run continuously and can see, hear and read by processing a stream of data (audio, video, XR, streaming text).
+
+Now, this is where it gets more interesting:
+
+* Dynamic `blocks`: Agents will be able to produce dynamic `blocks` from streaming input which will be executed by Amethyst at runtime. For example:
+  * A video agent looking at a live security footage may produce blocks like `intruder alert, invoking @alarm_agent`, depending on what they see. The block will be executed at run time, thus enabling the agent to dynamically invoke another agents and tools.
+  * The agent can also send dynamic blocks explicitly to other sub-agents for post-processing and verification. `@assistant_agent, double check @block`
+  * Of course, the dynamic `blocks` will be logged for debugging. We're not insane.
+* Fine-tuning: Live agents can be fine tuned to produce desired dynamic blocks (they're like thoughts). For example, the security agent can be fine tuned to raise alert only when someone unknown gets inside the property, and ignore known faces.
+
+Agent calling agents dynamically! Now're we're on our way to digital superintelligence.
