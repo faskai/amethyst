@@ -1,104 +1,135 @@
-import logging
-from typing import Optional
-from uuid import uuid4
-import httpx
+"""Cognitive execution engine."""
+
+import asyncio
+from typing import Dict, List, Any
 
 from . import amethyst_types
-from . import parser as amethyst_parser
-from a2a.client import A2ACardResolver, A2AClient
-from a2a.types import (
-    MessageSendParams,
-    SendMessageRequest,
-)
+from .memory import Memory, Task, Step, TaskType, StepType
+from .orchestrator import Orchestrator
+from .executor import call_tool, call_agent
 
 
-class AmethystCompiler:
-    """Main compiler for Amethyst language."""
+class AmethystEngine:
+    """Cognitive execution engine."""
     
     def __init__(self):
-        self.parser = amethyst_parser.AmethystParser()
+        self.memory = Memory()
         self.registry = amethyst_types.ResourceRegistry()
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        try:
+            self.orchestrator = Orchestrator()
+        except ValueError as e:
+            print(f"Warning: {e}")
+            self.orchestrator = None
     
     def register_resource(self, resource: amethyst_types.ResourceDefinition) -> None:
-        """Register a resource in the compiler's registry."""
+        """Register resource."""
         self.registry.register_resource(resource)
-        self.logger.info(f"Registered {resource.resource_type.value} '{resource.name}' in registry")
     
-    async def compile_and_execute(self, amethyst_code: str) -> str:
-        """Compile and execute Amethyst code."""
-        # Parse the agent
-        agent_def = self.parser.parse_agent(amethyst_code)
-        if not agent_def:
-            return "Error: Could not parse agent definition"
+    async def execute(self, instructions: str) -> str:
+        """Execute instructions."""
         
-        # Parse invoke calls
-        invoke_calls = self.parser.parse_invoke_calls(amethyst_code)
+        if not self.orchestrator:
+            return "Error: No OpenAI API key"
         
-        result = f"Agent '{agent_def.name}' created with instructions: {agent_def.instructions}\n"
-        result += f"Invoke calls found: {invoke_calls}\n"
+        lines = [line.strip() for line in instructions.split('\n') if line.strip()]
+        results = [f"🧠 Cognitive Engine Processing: {len(lines)} lines"]
         
-        # Execute A2A communication for each invoke call
-        for call in invoke_calls:
-            a2a_result = await self.execute_a2a_communication(call, agent_def.instructions)
-            result += f"A2A communication with @{call}: {a2a_result}\n"
+        position = 0
+        while position < len(lines) and position != -1:
+            # Skip agent/end lines  
+            while position < len(lines) and (lines[position].startswith('agent ') or lines[position].startswith('end ')):
+                position += 1
+            
+            if position >= len(lines):
+                break
+                
+            # Get execution plan
+            memory_summary = self._get_memory_summary()
+            plan = await self.orchestrator.plan_execution(
+                instructions=instructions,
+                memory_summary=memory_summary,
+                current_position=position,
+                available_resources=self.registry.list_resources()
+            )
+            
+            tasks = plan.get("tasks", [])
+            steps = plan.get("steps", [])
+            position = plan.get("next_position", -1)
+            
+            # Execute tasks
+            for task in tasks:
+                try:
+                    # Add task to memory immediately for tracking
+                    self.memory.add_task(task)
+                    
+                    # Create coroutine based on task type
+                    if task.task_type == TaskType.TOOL_CALL:
+                        async_task = call_tool(task.resource_name, task.parameters, self.registry)
+                    elif task.task_type == TaskType.AGENT_CALL:
+                        async_task = call_agent(task.resource_name, task.parameters, self.registry)
+                    else:
+                        # Future task types can be added here
+                        results.append(f"❌ Unknown task type: {task.task_type}")
+                        continue
+                    
+                    # Store coroutine for awaiting
+                    task.async_task = self._execute_task(task, async_task)
+                    
+                    if task.is_async:
+                        # Don't await, just store for later
+                        results.append(f"🚀 Started async {task.task_type.value} {task.resource_name}")
+                    else:
+                        # Execute sync immediately
+                        await task.async_task
+                        results.append(f"✅ {task.task_type.value} {task.resource_name}: Success")
+                        
+                except Exception as e:
+                    results.append(f"❌ {task.task_type.value} {task.resource_name}: {e}")
+            
+            # Execute steps
+            for step in steps:
+                try:
+                    if step.step_type == StepType.AWAIT:
+                        await self._await_tasks(step.task_ids)
+                        results.append(f"⏳ Awaited tasks: {step.task_ids}")
+                        
+                except Exception as e:
+                    results.append(f"❌ Step {step.step_type.value}: {e}")
         
-        return result
+        # Add final memory summary
+        results.append("\n📋 Final Memory:")
+        results.append(self._get_memory_summary())
+        
+        return "\n".join(results)
     
-    async def execute_a2a_communication(self, resource_name: str, prompt: str) -> str:
-        """Execute agent-to-agent communication using A2A SDK."""
+    async def _execute_task(self, task: Task, async_task) -> None:
+        """Execute async task and store result."""
         try:
-            # Look up the resource in the registry
-            resource = self.registry.get_resource(resource_name)
-            if not resource:
-                return f"Error: Resource '{resource_name}' not found in registry"
-            
-            if resource.resource_type != amethyst_types.ResourceType.AGENT:
-                return f"Error: Resource '{resource_name}' is not an agent"
-            
-            agent_def = resource.definition
-            if not agent_def.url:
-                return f"Error: Agent '{resource_name}' has no URL configured"
-            
-            base_url = agent_def.url
-            
-            async with httpx.AsyncClient() as httpx_client:
-                # Initialize A2ACardResolver
-                resolver = A2ACardResolver(
-                    httpx_client=httpx_client,
-                    base_url=base_url,
-                )
-                
-                # Fetch agent card
-                agent_card = await resolver.get_agent_card()
-                self.logger.info(f"Successfully fetched agent card for {resource_name}")
-                
-                # Initialize A2A client
-                client = A2AClient(
-                    httpx_client=httpx_client, 
-                    agent_card=agent_card
-                )
-                
-                # Send the full agent prompt
-                send_message_payload = {
-                    'message': {
-                        'role': 'user',
-                        'parts': [
-                            {'kind': 'text', 'text': prompt}
-                        ],
-                        'messageId': uuid4().hex,
-                    },
-                }
-                
-                request = SendMessageRequest(
-                    id=str(uuid4()), 
-                    params=MessageSendParams(**send_message_payload)
-                )
-                
-                response = await client.send_message(request)
-                return f"Success: {response.model_dump(mode='json', exclude_none=True)}"
-                
+            task.result = await async_task
         except Exception as e:
-            return f"Error in A2A communication: {str(e)}" 
+            task.result = f"Error: {e}"
+    
+    async def _await_tasks(self, task_ids: List[str]) -> None:
+        """Wait for specific async tasks."""
+        
+        tasks_to_await = []
+        for task_id in task_ids:
+            task = self.memory.get_task(task_id)
+            if task and task.async_task:
+                tasks_to_await.append(task.async_task)
+        
+        if tasks_to_await:
+            await asyncio.gather(*tasks_to_await)
+    
+    def _get_memory_summary(self) -> str:
+        """Get memory summary."""
+        tasks = self.memory.get_tasks()
+        if not tasks:
+            return "No previous tasks"
+        
+        summary = []
+        for task in tasks[-3:]:  # Last 3 tasks
+            result_preview = str(task.result)[:100] + "..." if len(str(task.result)) > 100 else str(task.result)
+            summary.append(f"{task.task_type.value} {task.resource_name}: {result_preview}")
+        
+        return "\n".join(summary)

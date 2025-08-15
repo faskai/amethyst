@@ -62,5 +62,5 @@ The compiler uses the A2A SDK to enable agent-to-agent communication. The hello 
 
 - `agent <name>`: Define an agent
 - `@<agent_name>`: Invoke another agent
-- `end <name>`: End agent definition
+- `end agent`: End agent definition
 - All syntax is case-insensitive 

@@ -1,9 +1,9 @@
 agent day_planner
-Plan a day depending on the weather. Check weather from @get_weather. 
+Plan a day dependeing on the weather. Check weather from @get_weather.
 If sunny find good hikes nearby under 10K with views using @all_trails
-Else if rainy find & book any nice waterfront restaurant with PNW food using @open_table  
-task a Book rezos / parking if needed using @browse_agent. 
-task b Plan todo, things to carry and pack using @todoist
+Else if rainy find & book any nice waterfront restaurant with PNW food using @open_table
+go do a Book rezos / parking if needed using @browser.
+go do b Plan todo, things to carry and pack using @todoist
 await a await b
 Send @email with the final plan
 end agent 
