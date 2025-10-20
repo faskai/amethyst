@@ -17,7 +17,7 @@ Amethyst is for 2 user groups:
 
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
-* Crew.ai, MetaGPT, etc. solve the cruicial accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write Python when you can just talk to the AI?*
+* OpenAI Agent SDK, Crew.ai, MetaGPT, etc. solve the cruicial accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write Python when you can just talk to the AI?*
 * Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. *(Sorry, Langchain, you're still the OG!)*
 * Zapier AI Agent editor is too simplistic, doesn't offer code-like composability or debugging.
 * Lindy.ai, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases.
@@ -32,61 +32,86 @@ Composition uses abstractions. Good abstractions help us build complexity withou
 
 Amethyst is the better solution for agent development. Its no-code for non-tech users, its language is literally plain English, is composable like Ruby and Python (without workflows), and performs powerful tasks under the hood, such as async processing and managing multiple agents.
 
-Here's a sample "code":
-#### Agent 1 – day_planner
-File day_planner.amt:
-> agent day_planner
-Plan a day dependeing on the weather. Check weather from `@get_weather`. 
-`If` sunny find good hikes nearby under 10K with views using `@all_trails`
-`Else if` rainy find & book any nice waterfront restaurant with PNW food using `@open_table`  
-`go do a` Book rezos / parking if needed using `@browser`. 
-`go do b` Plan todo, things to carry and pack using `@todoist`
-`await a` `await b`
-Send `@email` with the final plan
+### **Amethyst Language**
+
+#### **Agent 1 – day planner**
+
+File `day planner.amt`
+
+```
+agent day planner
+plan a day depending on the weather
+use get weather to check forecast
+if weather is sunny then
+use all trails to find hikes distance under 10k, view scenic
+else
+use open table to find restaurant cuisine pnw, location waterfront
+end if
+
+a: in parallel use browser to book parking
+b: in parallel use todoist to plan todo packing list
+wait for a, b
+
+use email to send plan final
 end agent
+```
 
+##### **Explanation**
 
-In this example:
-* An `agent` is composed of a `block` of code (instructions).
-* Tools:  `get_weather` is a tool.
-* Agents: `all_trails`, `open_table` are agents provided by AllTrails, and OpenTable respectively. `browser` is a general browser use agent that can open up the browser, navigate sites and perform actions such as book parking. `email` is an email agent that can read and send emails. `@todoist` manages todo lists.
-* The whole block will be executed by an amethyst orchestrator agent. (*It's sentient.* ;))
-* Loose syntax:
-  * Typical `if`, `else` blocks used in programming.
-  * `go do {task_name}` is an **async** `block` of code. By default they're fire and forget. If used like `await task_name` the program blocks until the task is done.
-  * They're all optional and non-rigid. Instead of "else" if you say "otherwise" the code will still work.
+* **agent** (instructions) — A block telling the AI agent what to do.
+* **tools** — `get weather` is a tool.
+* **agents** — `all trails`, `open table` are agents from AllTrails and OpenTable. `browser` automates web tasks; `email` sends messages; `todoist` manages to-dos.
+* **execution** — The entire block is executed by the Amethyst orchestrator agent.
 
-#### Agent 2 – all_trails
-> Find trails from description using `@find_trails`. Verify using `@all_trails_verifier`.
-##### Agent 2.1 – all_trails_verifier (Optional)
-> Verify that the trail matches the exact metrics such as length, elevation gain, etc., and description such as "lookout views".
+##### **Notes**
 
-Agent 2.1 shows how multi-agents can be used to review each other in a single block for accuracy. This could be important for enterprise workflows, such as financial accounting. 
+* **Labels** — Tasks like `a:` and `b:` are used to mark parallel or async actions. Labels begin before keywords and can be waited on using `wait for a, b`.
+* **Parallel** — For single-line statements, `in parallel` is sufficient (no `start` or `end` needed). Use `start in parallel ... end parallel` only for multi-paragraph parallel actions.
+* **Natural control flow** — Use natural words: `if`, `else`, `repeat`, `end if`.
+* **No symbols or quotes** — Everything reads as plain English.
 
-> 🔮 Note: We believe that in the future multi-agent madness will be abstracted, and developers won't have to do this explicitly.
+#### **Agent 2 – all trails**
 
-And so on... (other agents not described for brevity).
+```
+agent all trails
+use find trails to search description hike, distance under 10k, elevation moderate
+use all trails verifier to verify trail match length, elevation gain, description lookout views
+end agent
+```
 
-Use the new agent like this in a chat thread:
+##### **Agent 2.1 – all trails verifier (optional)**
 
-> Plan my saturday `@day_planner`
+```
+agent all trails verifier
+verify that trail matches metrics length, elevation gain, description lookout views
+end agent
+```
+
+This shows how multiple agents can work together for verification — useful for enterprise tasks like auditing or QA.
+
+> 🔮 *Future:* Amethyst will abstract this multi-agent madness, so users won’t have to define cross-checking logic explicitly.
+
+Use the new agent naturally in chat (Casual Language):
+
+```
+plan my saturday using day planner
+```
 
 Or execute the code in `1-click` right from the Amethyst IDE.
 
-That's it! The agents will do all the tasks, and you'll get an email with all the details for your day trip.
+That's it! Amethyst agents will automatically handle the workflow and deliver results (e.g., an email with your final plan).
 
-We believe this will be the obvious way to talk to and scale agents in the near future.
+#### Under the Hood
 
-#### What's Happening Under the Hood
+`.amt` files are compiled into Python. The compiler orchestrates agent interactions, tools, and environment actions.
 
-The `.amt` file is compiled in Python. The amethyst agent will break it down into a sequence of tasks and the compiler will execute them.
-
-> 🧐 Note: We didn't choose Ruby for practical reasons. Python currently has extensive support for LLM and Agent ops. And let's be honest – it doesn't have to be Ruby to *feel like* Ruby. 
+> 🧐 *Why not Ruby?* Python’s LLM and agent ecosystem is mature. The goal isn’t to mimic Ruby syntax but to achieve Ruby-like simplicity and readability.
 
 #### Environments
-Every agent gets compiled for and is run in a specific `environment` such as `MacOS`, `iOS`, `Browser`, `Docker Container`, `Raspberry Pi`, etc. You can extend environments to create your own. This is very similar to extending a docker image.
 
-You can define tools (analogous to functions) and agents (analogous to classes) in an application by creating/editing new `.amt` (amethyst) files:
+Each agent runs in an **environment** such as MacOS, iOS, Browser, Docker, or Raspberry Pi. You can extend environments to create your own.
+
+You can define tools, agents, functions and objects (analogous to classes) in `.amt` (amethyst) files:
 
 example_file.amt:
 ```
@@ -100,34 +125,72 @@ agent day_planner
 end day_planner
 ```
 
-You can also import resources (tools and agents) from other repositories (packages). Think of this as defining a `package.json` file in JS/TS. Amethyst will provide a package manager like `npm` or `pip`.
+#### Imports and External Resources
 
-When writing a class (.amt) you can import these resources:
-* [No code] Both consumers and devs can use the GUI IDE to find and simply select the tools and agents they would like to add from a global repo. If connecting with an external app you'll have to provide OAuth permission (standard sign in flow).
-* [Low code] Devs can also import via code like `use company_name/package_name` and set the API keys in `.env`.
+You can import external **agents**, **tools**, **models**, or **libraries** directly from the global Amethyst registry. Think of this as defining a `package.json` file in JS/TS. Amethyst will provide a package manager, similar to `npm` or `pip`.
 
-These imported resources may run locally or remotely (using **MCP** and **A2A** protocols).
+* **No code**: Use the GUI IDE to browse, select and OAuth the tools and agents from a global repo.
+* **Low code**: Imports are written in natural English using the canonical `use <type> <name> from <source>` pattern. Set the API keys in `.env`.
+
+Examples:
+
+```
+use agent browse from perplexity ai
+use tool get weather from open weather
+use model GPT-4o from openai, temperature 0.3
+use library finance utils from acme corp
+```
+
+* **use** introduces a dependency.
+* **type** can be `agent`, `tool`, `model`, or `library`.
+* **name** is the identifier for that resource.
+* **from** defines the source (organization, company, or registry).
+* Optional configuration follows as natural phrases or comma-separated arguments.
+
+Example file:
+
+```
+agent campsite finder
+use agent browse from perplexity ai
+use model GPT-4o from openai, temperature 0.3
+find campsites nearby using browse
+end agent
+```
+
+These imported resources may run locally or remotely (using **MCP** and **A2A** protocols). 
 
 You can also configure the LLM model per agent (GPT-4o, etc.).
 
 campsite_finder.amt:
 ```
 agent campsite_finder
-use perplexity/browse_agent # third party agent
-use model openai/GPT-4o # model
-find campsites nearby using @browse_agent
+use agent perplexity browse # third party agent
+use model openai GPT-4o # model
+find campsites nearby using agent
 end agent
 ```
 
-Depending on the environment some agents / tools may not be compatible. E.g., you cannot run a `browser` (agent) on a `RaspberryPi`. The compiler will throw an error if this happens.
+Environments determine available tools and agents (e.g., browsers can’t run on Raspberry Pi). The compiler raises errors for incompatible contexts.
 
-The agent may get stuck sometimes and ask for user help, such as login or anti-AI captcha. Amethyst will make sure the program resumes from that point.
+Agents or tools may pause for user input (e.g., login, captcha). Amethyst resumes automatically once resolved.
 
-#### Bundled Resources
-Amethyst will include a library of common tools and agents such as `@swe` (coder agent), `@date_time` (tool), etc. You can expect all common utilities that a programing language provides.
+#### **Bundled Resources**
 
+Amethyst includes common agents and tools such as:
 
-#### Coming Soon
+* `swe` — Software engineer agent
+* `date time` — Date and time tool
+* `browser`, `email`, `todoist`
+
+These are available out of the box for rapid prototyping.
+
+#### Formal and Casual Langs
+
+Amethyst Formal Language (AFL) is designed to feel human — one canonical, readable way to instruct intelligent agents.
+
+Amethyst Casual Language (ACL) is designed to feel even more casual — it doesn't require any syntax or grammar. The IDE will convert ACL to AFL.
+
+### Coming Soon
 As with any programming language there will be more docs and features aound:
 * Error handling. By default Amethyst errors will be thrown with full details up the stack. Agents may try/catch them.
 * Testing (tools, tasks, agents).
