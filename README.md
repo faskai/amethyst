@@ -136,22 +136,7 @@ You can import external **agents**, **tools**, **models**, or **libraries** dire
 * **No code**: Use the GUI IDE to browse, select and OAuth the tools and agents from a global repo.
 * **Low code**: Imports are written in natural English using the canonical `use <type> <name> from <source>` pattern. Set the API keys in `.env`.
 
-Examples:
-
-```
-use agent browse from perplexity ai
-use tool get weather from open weather
-use model GPT-4o from openai, temperature 0.3
-use library finance utils from acme corp
-```
-
-* **use** introduces a dependency.
-* **type** can be `agent`, `tool`, `model`, or `library`.
-* **name** is the identifier for that resource.
-* **from** defines the source (organization, company, or registry).
-* Optional configuration follows as natural phrases or comma-separated arguments.
-
-Example file:
+Example file, campsite_finder.amt:
 
 ```
 agent campsite finder
@@ -161,22 +146,18 @@ find campsites nearby using browse
 end agent
 ```
 
-These imported resources may run locally or remotely (using **MCP** and **A2A** protocols). 
+##### Syntax
+* **use** introduces a dependency.
+* **type** can be `agent`, `tool`, `model`, or `library`.
+* **name** is the identifier for that resource.
+* **from** defines the source (organization, company, or registry).
+* Optional configuration follows as natural phrases or comma-separated arguments.
 
-You can also configure the LLM model per agent (GPT-4o, etc.).
-
-campsite_finder.amt:
-```
-agent campsite_finder
-use agent perplexity browse # third party agent
-use model openai GPT-4o # model
-find campsites nearby using agent
-end agent
-```
-
-Environments determine available tools and agents (e.g., browsers can’t run on Raspberry Pi). The compiler raises errors for incompatible contexts.
-
-Agents or tools may pause for user input (e.g., login, captcha). Amethyst resumes automatically once resolved.
+##### Notes
+* These imported resources may run locally or remotely (using **MCP** and **A2A** protocols). 
+* You can also configure the LLM model per agent (GPT-4o, etc.).
+* Environments determine available tools and agents (e.g., browsers can’t run on Raspberry Pi). The compiler raises errors for incompatible contexts.
+* Agents or tools may pause for user input (e.g., login, captcha). Amethyst resumes automatically once resolved.
 
 #### **Bundled Resources**
 

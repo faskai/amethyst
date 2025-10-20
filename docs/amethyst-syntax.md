@@ -26,7 +26,7 @@ use <actor> to <action> <role> <value>, <role> <value>, ...
 * **Action**: verb phrase (capability)
 * **Arguments**: comma-separated role–value pairs
 * **Values**: may be multi-word without quotes (e.g., `main scene`, `safe place`)
-* End of line (or comma continuation) ends the call.
+* End of line ends the call.
 
 **Examples**
 
@@ -36,10 +36,6 @@ use player to move to safe place
 use browser to open url https://amethyst.dev, timeout 5 seconds
 use email to send to alice@example.com, subject weekly report, body draft report
 ```
-
-**Tokenization rule for multi-word values**
-
-* A value continues until a comma, reserved token (`then`, `else`, `when`, `end`, `in parallel`, `start in parallel`, `wait for`), or end-of-line.
 
 ---
 
