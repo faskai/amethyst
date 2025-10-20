@@ -1,6 +1,6 @@
-Amethyst Formal Language (FL) aims to read like natural English typed by non-technical users. Scope is defined by explicit start/end markers for multi-para statements, or just in one line without start/end.
+Amethyst Formal Language (AFL) aims to read like natural English typed by non-technical users. Scope is defined by explicit start/end markers for multi-para statements, or just in one line without start/end. This doc outlines the AFL specs.
 
-Amethyst Casual Language (CL) is even more casual and does not need any syntax at all. The IDE will convert CL to FL.
+Amethyst Casual Language (ACL) is even more casual and does not need any syntax at all. The IDE will convert ACL to AFL.
 
 ---
 
@@ -16,7 +16,7 @@ Amethyst Casual Language (CL) is even more casual and does not need any syntax a
 
 # 2) Unified call shape (tools, methods, functions)
 
-**Canonical FE invocation**
+**Canonical AFL invocation**
 
 ```
 use <actor> to <action> <role> <value>, <role> <value>, ...
@@ -40,14 +40,12 @@ use email to send to alice@example.com, subject weekly report, body draft report
 **Tokenization rule for multi-word values**
 
 * A value continues until a comma, reserved token (`then`, `else`, `when`, `end`, `in parallel`, `start in parallel`, `wait for`), or end-of-line.
-* Quotes are optional for clarity.
 
 ---
 
 # 3) Blocks — free text, no indentation
 
-* **Definition blocks**: start/end keywords define scope.
-  * **Example**: Parallel blocks: explicit `start in parallel ... end parallel`.
+* **Definition blocks**: start/end keywords define scope. Example, parallel blocks: explicit `start in parallel ... end parallel`.
 * **Single line statements**: `if .. then ..`; `in parrallel ..` 
 
 **Example**
@@ -134,11 +132,3 @@ Whitespace and indentation have no meaning; explicit markers and tokens control 
 
 ---
 
-# 7) Notes on multi-word names
-
-* Users type names naturally: `day planner`, `main scene`, `safe place`
-* Parser treats consecutive words as one identifier until a comma or reserved token
-
----
-
-Amethyst FE remains readable as casual writing yet strictly canonical and directly transpilable to Python.

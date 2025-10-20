@@ -1,10 +1,8 @@
 ## Amethyst AI
 
-`Amethyst` is the first AI-native language and IDE to build agents. 
+`Amethyst` is the first no-code, AI-native programming language and IDE. 
 
-It optimizes human happiness by hiding complexity. We're taking "English is the next programming language" to its logical conclusion.
-
-Internally, Amethyst takes care of reliability, accuracy (supports multi-agents) and provides enterprise level scale, so that builders don't have to write explicit code for them. It's inspired by the principles of Ruby and uses convention-over-configuration choices in many places to keep the developer experience simple.
+It hides complexity and feels like talking to a human (AI). We're taking "English is the next programming language" to its logical conclusion.
 
 This doc is a whitepaper and outlines the vision and specs. The code will follow soon.
 
@@ -12,27 +10,33 @@ This doc is a whitepaper and outlines the vision and specs. The code will follo
 
 ### Who is Amethyst For
 Amethyst is for 2 user groups:
-* **Consumers** – non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their home, etc. They will get a very simple GUI editor that works on all devices. 
-* **Developers** – technical or enterprise users who want to build sophisticated large scale agentic applications. They will get advanced IDE and tools for debugging, observability, deploying and managing globally at scale.
+* **Consumers** – Amethyst Casual Language (ACL) doesn't require any syntax or grammar. It's meant for non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their homes, etc. They will get a very simple GUI editor that works on all devices.
+* **Developers** – Amethyst Formal Language (AFL) is designed to feel natural, but is also canonical and provides programming language rigor – debugging, breakpoints, observability and composability. It's meant for technical or enterprise users who want to build sophisticated large scale agentic applications. Devs will get an IDE and tools for deploying and managing Amethyst applications and agents globally at scale. The IDE will convert ACL to AFL. 
 
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
-* OpenAI Agent SDK, Crew.ai, MetaGPT, etc. solve the cruicial accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write Python when you can just talk to the AI?*
-* Langchain offers many features, but is a bit too convoluted and unintuitive for new devs. Definitely not for consumers. *(Sorry, Langchain, you're still the OG!)*
-* Zapier AI Agent editor is too simplistic, doesn't offer code-like composability or debugging.
-* Lindy.ai, MS Copilot, Botpress, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases.
+* Crew.ai, MetaGPT, Langchain, etc. solve the accuracy problem, but require devs to write a lot of code. Not for consumers. *Why write code when you can just talk to the AI?*
+* Lindy.ai, OpenAI Agent Builder, MS Copilot, Botpress, Zapier AI, etc. – they all need drag-and-drop workflows which can get messy pretty fast with enterprise use-cases. They don't offer code-like composability or debugging.
 
 We've used several agent frameworks and tried our hand at building two frameworks here at Fask – one workflow-based and one GUI – and we still don't like what we built.
 
 At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
-We prefer composable code over GUI workflows. Primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose composite `blocks` – i.e., applications – which are also easy to test, maintain and scale. *`blocks` all the way down!*
+We prefer composition over workflows. Primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose composite `blocks` – i.e., applications – which are also easy to test, maintain and scale. *`blocks` all the way down!*
 
 Composition uses abstractions. Good abstractions help us build complexity without making things complicated. 
 
-Amethyst is the better solution for agent development. Its no-code for non-tech users, its language is literally plain English, is composable like Ruby and Python (without workflows), and performs powerful tasks under the hood, such as async processing and managing multiple agents.
+Amethyst is the better solution for agent development. Its language is literally plain English, is composable like Ruby and Python (without workflows), and does powerful stuff under the hood without extra code, such as:
+- Parallel processing
+- Multi-agents, guardrails for accuracy
+- State management for reliability and large contexts
+- Auto scaling for enterprise-level availability
+
+Amethyst is inspired by the principles of Ruby and uses convention-over-configuration choices in many places to keep the developer experience simple.
 
 ### **Amethyst Language**
+
+[See this for the full spec.](https://github.com/faskai/amethyst/blob/main/docs/amethyst-syntax.md)
 
 #### **Agent 1 – day planner**
 
@@ -184,33 +188,23 @@ Amethyst includes common agents and tools such as:
 
 These are available out of the box for rapid prototyping.
 
-#### Formal and Casual Langs
-
-Amethyst Formal Language (AFL) is designed to feel human — one canonical, readable way to instruct intelligent agents.
-
-Amethyst Casual Language (ACL) is designed to feel even more casual — it doesn't require any syntax or grammar. The IDE will convert ACL to AFL.
-
 ### Coming Soon
-As with any programming language there will be more docs and features aound:
-* Error handling. By default Amethyst errors will be thrown with full details up the stack. Agents may try/catch them.
-* Testing (tools, tasks, agents).
+As with any programming language there will be more docs and features around:
+* Error handling: By default, Amethyst errors will be thrown with full details up the stack. Devs may try/catch them.
+* Testing agents, tools, blocks and entity and functions.
 * Details on how to publish packages and importing from external repos.
-* Looping: `Do until` condition is met within agents. *P.S. Aren't agents just big while loops with unreadable code?*
-* Debugging agents – Amethyst IDE will provide breakpoints where you can step through each line of code or a whole `block`.
-* Seamless code gen – Just type or talk freely, and the IDE will automatically edit-in syntaxes, correct tool and agent names.
+* Looping: E.g., `Repeat while` condition is met.
+* Debugging: Amethyst IDE will allow breakpoints where you can step through each line of code or a whole `block`.
+* Seamless code gen: Just type or talk freely, and the IDE will automatically convert Casual Language to Formal Language.
 * Deploying, monitoring, scaling.
-
-Advanced agentic features coming soon (ish):
-* Inputs and triggers – what starts an agent? API call, webhook, etc.
-* Chat with amethyst – instead of writing .amt files, just send a message (`block` of amethyst code) and the agent will execute it.
-* Live multimodal agents - Agents that run continuously and can see, hear and read by processing a stream of data (audio, video, XR, streaming text).
-
-Now, this is where it gets more interesting:
-
-* Dynamic `blocks`: Agents will be able to produce dynamic `blocks` from streaming input which will be executed by Amethyst at runtime. For example:
+* Inputs and triggers: what starts an agent or application? API call, webhook, user input, etc.
+* Chat with amethyst: Instead of writing .amt files, just send a message (ACL) and the agent will execute it.
+* Multiplayer chat with humans and agents for group collaborative editing.
+* Live multimodal agents: Agents that run continuously and can see, hear and read by processing a stream of data (audio, video, XR, streaming text).
+* Dynamic `blocks`: Agents will produce dynamic Amethyst `blocks` from streaming input which will be executed at runtime. It's basically like an Agent dynamically coding and executing it. You don't even need to write the Agent logic beforehand. For example:
   * A video agent looking at a live security footage may produce blocks like `intruder alert, invoking @alarm_agent`, depending on what they see. The block will be executed at run time, thus enabling the agent to dynamically invoke another agents and tools.
   * The agent can also send dynamic blocks explicitly to other sub-agents for post-processing and verification. `@assistant_agent, double check @block`
-  * Of course, the dynamic `blocks` will be logged for debugging. We're not insane.
+  * Of course, the dynamic `blocks` will be logged for debugging. *We're not insane.*
 * Fine-tuning: Live agents can be fine tuned to produce desired dynamic blocks (they're like thoughts). For example, the security agent can be fine tuned to raise alert only when someone unknown gets inside the property, and ignore known faces.
 
-Agents calling agents calling agents in a big recursive agentic web! Now're we're on our way to digital superintelligence.
+Agents calling agents calling agents in a big, recursive agentic web! Now're we're on our way to digital superintelligence.
