@@ -1,0 +1,6 @@
+agent day planner
+Plan a day dependeing on the weather. Check weather.
+If sunny find good hikes nearby under 10K with views using all trails
+Else if rainy find & book any nice waterfront restaurant with PNW food
+In parallel book rezos / parking if needed using browser, and plan todo - things to carry and pack
+Send email with the final plan

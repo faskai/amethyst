@@ -1,0 +1,6 @@
+tim agent 
+Tim is my personal assistant
+Place starbucks cofee order using browser. Venti black coffee.
+If weather is rainy schedule uber to Vancouver downtown at 6 pm using browser.
+Add buy eggs to my todo
+send email to ravi@gmail.com asking for updates on project plan

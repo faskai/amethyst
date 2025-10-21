@@ -8,15 +8,14 @@ from typing import Dict, Any
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import MessageSendParams, SendMessageRequest
 
-from . import amethyst_types
+from . import types
 
 
-async def call_tool(tool_name: str, parameters: Dict[str, Any], registry: amethyst_types.ResourceRegistry) -> str:
+async def call_tool(tool_name: str, parameters: Dict[str, Any], registry: types.ResourceRegistry) -> str:
     """Call MCP tool."""
     
-    clean_name = tool_name.replace('@', '')
-    resource = registry.get_resource(clean_name)
-    if not resource or resource.resource_type != amethyst_types.ResourceType.TOOL:
+    resource = registry.get_resource(tool_name)
+    if not resource or resource.resource_type != types.ResourceType.TOOL:
         return f"Tool {tool_name} not found"
     
     try:
@@ -37,12 +36,11 @@ async def call_tool(tool_name: str, parameters: Dict[str, Any], registry: amethy
         return f"Error: {e}"
 
 
-async def call_agent(agent_name: str, parameters: Dict[str, Any], registry: amethyst_types.ResourceRegistry) -> str:
+async def call_agent(agent_name: str, parameters: Dict[str, Any], registry: types.ResourceRegistry) -> str:
     """Call A2A agent."""
     
-    clean_name = agent_name.replace('@', '')
-    resource = registry.get_resource(clean_name)
-    if not resource or resource.resource_type != amethyst_types.ResourceType.AGENT:
+    resource = registry.get_resource(agent_name)
+    if not resource or resource.resource_type != types.ResourceType.AGENT:
         return f"Agent {agent_name} not found"
         
     try:

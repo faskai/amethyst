@@ -1,34 +1,35 @@
-"""Cognitive execution engine."""
+"""Amethyst execution engine - main interpreter and coordinator."""
 
 import asyncio
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
-from . import amethyst_types
+from . import types
 from .memory import Memory, Task, Step, TaskType, StepType
-from .orchestrator import Orchestrator
+from .planner import CognitivePlanner
 from .executor import call_tool, call_agent
+from .compiler import convert_acl_to_afl
 
 
 class AmethystEngine:
-    """Cognitive execution engine."""
+    """Main execution engine - interprets and coordinates AI-powered execution."""
     
     def __init__(self):
         self.memory = Memory()
-        self.registry = amethyst_types.ResourceRegistry()
+        self.registry = types.ResourceRegistry()
         try:
-            self.orchestrator = Orchestrator()
+            self.planner = CognitivePlanner()
         except ValueError as e:
             print(f"Warning: {e}")
-            self.orchestrator = None
+            self.planner = None
     
-    def register_resource(self, resource: amethyst_types.ResourceDefinition) -> None:
+    def register_resource(self, resource: types.ResourceDefinition) -> None:
         """Register resource."""
         self.registry.register_resource(resource)
     
     async def execute(self, instructions: str) -> str:
-        """Execute instructions."""
+        """Execute instructions using cognitive planning."""
         
-        if not self.orchestrator:
+        if not self.planner:
             return "Error: No OpenAI API key"
         
         lines = [line.strip() for line in instructions.split('\n') if line.strip()]
@@ -43,9 +44,9 @@ class AmethystEngine:
             if position >= len(lines):
                 break
                 
-            # Get execution plan
+            # Get execution plan from cognitive planner
             memory_summary = self._get_memory_summary()
-            plan = await self.orchestrator.plan_execution(
+            plan = await self.planner.plan_execution(
                 instructions=instructions,
                 memory_summary=memory_summary,
                 current_position=position,
@@ -133,3 +134,27 @@ class AmethystEngine:
             summary.append(f"{task.task_type.value} {task.resource_name}: {result_preview}")
         
         return "\n".join(summary)
+    
+    async def execute_acl(self, acl_text: str, save_afl_path: Optional[str] = None) -> str:
+        """Execute ACL by converting to AFL first.
+        
+        Converts ACL (Casual) → AFL (Formal) → execution.
+        """
+        
+        if not self.planner:
+            return "Error: No OpenAI API key"
+        
+        # Convert ACL to ASL/AFL using compiler
+        afl_code = await convert_acl_to_afl(
+            client=self.planner.client,
+            acl_text=acl_text,
+            available_resources=self.registry.list_resources()
+        )
+        
+        # Optionally save AFL to file
+        if save_afl_path:
+            with open(save_afl_path, 'w') as f:
+                f.write(afl_code)
+        
+        # Execute the AFL
+        return await self.execute(afl_code)

@@ -1,7 +1,7 @@
 [project]
-name = "amethyst-compiler"
+name = "amethyst-engine"
 version = "0.1.0"
-description = "Amethyst language compiler"
+description = "Amethyst execution engine"
 authors = [
     {name = "Arko Bhattacharya",email = "arko@fask.ai"}
 ]

@@ -1,4 +1,4 @@
-"""OpenAI GPT-5 orchestrator agent."""
+"""AI-powered cognitive planner."""
 
 import openai
 import os
@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from .memory import Task, Step, TaskType, StepType
 
 
-class Orchestrator:
-    """LLM powered orchestrator."""
+class CognitivePlanner:
+    """AI-powered execution planner using GPT-4."""
     
     def __init__(self):
         load_dotenv()
@@ -26,7 +26,7 @@ class Orchestrator:
         current_position: int,
         available_resources: List[str]
     ) -> Dict[str, Any]:
-        """Plan next execution using GPT-5 tool calling."""
+        """Plan next execution step using AI reasoning."""
         
         lines = [line.strip() for line in instructions.split('\n') if line.strip()]
         context_lines = lines[current_position:current_position+5] if current_position < len(lines) else []
@@ -47,7 +47,7 @@ class Orchestrator:
                     "type": "object",
                     "properties": {
                         "id": {"type": "string", "description": "Unique task ID"},
-                        "resource_name": {"type": "string", "description": "Resource name like @get_weather"},
+                        "resource_name": {"type": "string", "description": "Resource name like 'get weather' (space case, no symbols)"},
                         "task_type": {"type": "string", "enum": ["tool_call", "agent_call"]},
                         "parameters": {"type": "object", "description": "Parameters for the call"},
                         "is_async": {"type": "boolean", "description": "Whether to run async"}
@@ -90,10 +90,10 @@ class Orchestrator:
             }
         })
         
-        tool_list = ', '.join([f"@{t[5:]}" for t in tools]) if tools else "None"
-        agent_list = ', '.join([f"@{a[6:]}" for a in agents]) if agents else "None"
+        tool_list = ', '.join([t[5:] for t in tools]) if tools else "None"
+        agent_list = ', '.join([a[6:] for a in agents]) if agents else "None"
         
-        system_prompt = f"""You are an orchestrator for the Amethyst execution engine.
+        system_prompt = f"""You are a cognitive planner for the Amethyst execution engine.
 
 Available Resources:
 - Tools: {tool_list} 
@@ -110,9 +110,15 @@ NEXT LINES: {context_lines}
 
 What should execute next?"""
 
+        print(f"\n🔍 DEBUG - Planner Iteration:")
+        print(f"  Position: {current_position}")
+        print(f"  Context Lines: {context_lines}")
+        print(f"  Memory Summary: {memory_summary}")
+        print("-" * 60)
+
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -156,5 +162,5 @@ What should execute next?"""
             }
             
         except Exception as e:
-            print(f"Orchestrator error: {e}")
+            print(f"Planner error: {e}")
             return {"tasks": [], "steps": [], "next_position": -1}
