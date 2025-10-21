@@ -1,8 +1,6 @@
 ## Amethyst AI
 
-`Amethyst` is the first no-code, AI-native programming language and IDE. 
-
-It hides complexity and feels like talking to a human (AI). We're taking "English is the next programming language" to its logical conclusion.
+`Amethyst` is the first no-code, AI-native programming language and IDE. It's the simplest way to build apps and feels like talking to a human (AI). We're taking "English is the next programming language" to its logical conclusion.
 
 This doc is a whitepaper and outlines the vision and specs. The code will follow soon.
 
@@ -10,8 +8,10 @@ This doc is a whitepaper and outlines the vision and specs. The code will follo
 
 ### Who is Amethyst For
 Amethyst is for 2 user groups:
-* **Consumers** – Amethyst Casual Language (ACL) doesn't require any syntax or grammar. It's meant for non-tech users who want to easily build powerful AI sidekicks to automate their lives; builders and tinkerers who want to automate their homes, etc. They will get a very simple GUI editor that works on all devices.
-* **Developers** – Amethyst Formal Language (AFL) is designed to feel natural, but is also canonical and provides programming language rigor – debugging, breakpoints, observability and composability. It's meant for technical or enterprise users who want to build sophisticated large scale agentic applications. Devs will get an IDE and tools for deploying and managing Amethyst applications and agents globally at scale. The IDE will convert ACL to AFL. 
+* **Consumers** – Amethyst Casual Language (ACL) is free-flowing chat with no grammar rules or syntax. It's meant for non-tech casual users to easily build powerful AI agents and apps to automate homes, tasks, etc. They will get a simple GUI editor that works on all devices.
+* **Developers** – Amethyst Formal Language (AFL) is structured, precise and scalable, but still is dead-simple and reads like natural English. It's meant for non-tech enterprise users. They will get an IDE and tools for managing Amethyst applications globally at scale.
+
+Both ACL and AFL supports debugging with breakpoints, uses abstractions and composability. The IDE will convert ACL to AFL.
 
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
@@ -22,27 +22,17 @@ We've used several agent frameworks and tried our hand at building two framework
 
 At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
-We prefer composition over workflows. Primitive building `blocks` are much easier to test, maintain and scale. They can be used to compose composite `blocks` – i.e., applications – which are also easy to test, maintain and scale. *`blocks` all the way down!*
+Instead of workflows, with Amethyst you build teams of agents, and you instruct them in plain English like you'd talk to your human assistant or employees. Using them as abstractions, you can *compose* software applications and hierarchies of agents for high-level tasks, without being bogged down by low-level details. Good abstractions help us build complexity without making things complicated. 
 
-Composition uses abstractions. Good abstractions help us build complexity without making things complicated. 
-
-Amethyst is the better solution for agent development. Its language is literally plain English, is composable like Ruby and Python (without workflows), and does powerful stuff under the hood without extra code, such as:
+Amethyst is inspired by Ruby, and gives you radical simplicity while taking care of all the necessary complexity under the hood:
+- Guardrails for accuracy
 - Parallel processing
-- Multi-agents, guardrails for accuracy
-- State management for reliability and large contexts
-- Auto scaling for enterprise-level availability
-
-Amethyst is inspired by the principles of Ruby and uses convention-over-configuration choices in many places to keep the developer experience simple.
+- Executing large business workflows reliably
+- Auto-scaling for high availability
 
 ### Amethyst Language
 
 [See the full spec.](https://github.com/faskai/amethyst/blob/main/docs/amethyst-syntax.md)
-
-Amethyst lets you write in three levels:
-
-* **ACL (Casual)** – free-flowing chat with no grammar rules.
-* **ASL (Semi-formal)** – slightly structured, reads like natural English. Use this to instruct agents.
-* **AFL (Formal)** – fully structured and precise. Used for fast programming.
 
 #### Example: day planner
 
@@ -96,20 +86,18 @@ This shows how multiple agents can work together for verification — useful for
 
 #### Using the Agents
 
-Use the new agent naturally in chat (Casual Language):
+Use agents:
+* naturally in chat (Casual Language)
 ```
 plan my saturday using day planner
 ```
-Or execute the code in `1-click` right from the Amethyst IDE.
-That's it! Amethyst agents will automatically handle the workflow and deliver results (e.g., an email with your final plan).
+* on schedules, events, user inputs or API calls
+
+That's it! Amethyst agents will follow instructions and deliver results (e.g., an email with your final plan).
 
 #### Behind the Scenes
 
-Amethyst converts ACL into ASL and AFL, that runs as Python code. The same file can be:
-
-* read like English,
-* debugged like code,
-* and executed by an intelligent engine.
+Amethyst converts ACL into ASL and AFL, that runs as Python code. The same file can be read like English, debugged like code, and executed by an intelligent engine.
 
 > 🧐 *Why not Ruby?* Python’s LLM and agent ecosystem is mature. The goal isn’t to mimic Ruby syntax but to achieve Ruby-like simplicity and readability.
 
@@ -117,7 +105,7 @@ Amethyst converts ACL into ASL and AFL, that runs as Python code. The same file 
 
 You can bring in external agents or tools easily, just like adding apps to your phone.
 * **No code**: Use the GUI IDE to browse, select and OAuth the tools and agents from a global repo.
-* **Low code**: Imports are written in natural English using the canonical `use <type> <provider> <name>` pattern. Amethyst will provide a package manager, similar to `npm` or `pip`.
+* **Low code**: Imports are written using the `use <type> <provider> - <name>` pattern. Amethyst will provide a package manager, similar to `npm` or `pip`.
 
 ```
 agent campsite finder
@@ -134,9 +122,9 @@ end agent
 
 #### Environments
 
-Each agent runs in an **environment** (env) such as MacOS, iOS, Browser, Docker, or Raspberry Pi. You can extend environments to create your own. * Environments determine available tools and agents (e.g., browsers can’t run on Raspberry Pi). The compiler raises errors for incompatible contexts.
+Each agent runs in an **environment** (env) such as MacOS, iOS, Browser, Docker, or Raspberry Pi. You can extend environments to create your own. Environments determine available tools and agents (e.g., browsers can’t run on Raspberry Pi). The compiler raises errors for incompatible contexts.
 
-You can define tools, agents, functions and objects (analogous to classes) in `.amt` (amethyst) files:
+You can define tools, agents and other entities (analogous to classes) in `.amt` (amethyst) files:
 
 example_file.amt:
 ```
