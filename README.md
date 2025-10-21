@@ -8,8 +8,8 @@ This doc is a whitepaper and outlines the vision and specs. The code will follo
 
 ### Who is Amethyst For
 Amethyst is for 2 user groups:
-* **Consumers** – Amethyst Casual Language (ACL) is free-flowing chat with no grammar rules or syntax. It's meant for non-tech casual users to easily build powerful AI agents and apps to automate homes, tasks, etc. They will get a simple GUI editor that works on all devices.
-* **Developers** – Amethyst Formal Language (AFL) is structured, precise and scalable, but still is dead-simple and reads like natural English. It's meant for non-tech enterprise users. They will get an IDE and tools for managing Amethyst applications globally at scale.
+* **Consumers** – Amethyst Casual Language (ACL) is free-flowing chat with no grammar rules or syntax. It's meant for non-tech casual users to easily build powerful AI agents and apps to automate homes, tasks, etc. You'll use a simple editor app that works on all devices.
+* **Developers** – Amethyst Formal Language (AFL) is structured, precise and scalable, but still is dead-simple and reads like natural English. It's meant for non-tech enterprise users. You can use an IDE and tools for managing Amethyst applications globally at scale.
 
 Both ACL and AFL supports debugging with breakpoints, uses abstractions and composability. The IDE will convert ACL to AFL.
 
@@ -80,17 +80,14 @@ verify that each trail matches distance and elevation requirements
 end agent
 ```
 
-This shows how multiple agents can work together for verification — useful for enterprise tasks like auditing or accounting.
+This shows how multiple agents can work together for accuracy — useful for enterprise tasks like auditing or accounting.
 
 > 🔮 *Future:* Amethyst will abstract this multi-agent madness, so users won’t have to define cross-checking logic explicitly.
 
 #### Using the Agents
 
 Use agents:
-* naturally in chat (Casual Language)
-```
-plan my saturday using day planner
-```
+* naturally in chat (Casual Language) – `plan my saturday using day planner`
 * on schedules, events, user inputs or API calls
 
 That's it! Amethyst agents will follow instructions and deliver results (e.g., an email with your final plan).
@@ -128,14 +125,15 @@ You can define tools, agents and other entities (analogous to classes) in `.amt`
 
 example_file.amt:
 ```
-tool get_weather
+tool get weather
 {
   # JSON schema of tool
 }
+end tool
 
-agent day_planner
+agent day planner
 # agent code...
-end day_planner
+end agent
 ```
 
 #### Built-in Agents and Tools

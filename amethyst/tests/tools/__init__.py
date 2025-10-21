@@ -18,7 +18,7 @@ __all__ = [
 
 # Tool registry for unified server
 AVAILABLE_TOOLS = {
-    "get_weather": GET_WEATHER_TOOL,
+    "get-weather": GET_WEATHER_TOOL,
     "email": EMAIL_TOOL
 }
 

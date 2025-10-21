@@ -1,0 +1,2 @@
+agent slack assistant
+send slack message about weather forecast. If weather is rainy then send an email to arko@fask.ai

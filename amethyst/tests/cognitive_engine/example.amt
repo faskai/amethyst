@@ -1,0 +1,13 @@
+agent slack assistant
+
+send slack message about weather forecast
+
+use get weather to check weather
+
+use slack - post message: channel: general, content: Weather forecast: {weather}
+
+if rainy
+use email - recipient: arko@fask.ai, subject: Rain alert, content: The weather forecast is rainy. This is an automated alert.
+end if
+
+end agent

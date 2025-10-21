@@ -20,7 +20,7 @@ def get_weather_tool(location: str = "Seattle, WA") -> str:
 
 # Tool metadata for MCP protocol
 TOOL_INFO = {
-    "name": "get_weather",
+    "name": "get-weather",
     "description": "Get current weather information for a location",
     "function": get_weather_tool,
     "parameters": {
@@ -44,7 +44,7 @@ TOOL_INFO = {
 
 
 async def handle_mcp_call(arguments: dict[str, Any]) -> list[types.TextContent]:
-    """Handle MCP tool call for get_weather."""
+    """Handle MCP tool call for get weather."""
     location = arguments.get("location", "Seattle, WA")
     
     # Mock weather data

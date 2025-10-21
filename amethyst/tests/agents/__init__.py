@@ -19,9 +19,9 @@ __all__ = [
 
 # Agent registry for unified server
 AGENT_CONFIGS = {
-    "hello_world_agent": get_hello_world_config,
-    "all_trails": get_all_trails_config,
-    "open_table": get_open_table_config,
+    "hello-world-agent": get_hello_world_config,
+    "all-trails": get_all_trails_config,
+    "open-table": get_open_table_config,
     "browser": get_browser_config,
     "todoist": get_todoist_config
 }
