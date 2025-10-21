@@ -1,6 +1,6 @@
 ## Amethyst AI
 
-`Amethyst` is the first no-code, AI-native programming language and IDE. It's the simplest way to build apps and feels like talking to a human (AI). We're taking "English is the next programming language" to its logical conclusion.
+`Amethyst` is the first no-code, AI-native programming language and IDE. It's the simplest way to build apps and feels like talking to a human. We're taking "English is the next programming language" to its logical conclusion.
 
 This doc is a whitepaper and outlines the vision and specs. The code will follow soon.
 
@@ -22,13 +22,13 @@ We've used several agent frameworks and tried our hand at building two framework
 
 At Amazon I've been in "workflow hell" where you stare down 1000s of "stuck" workflows with complicated branchings that are so big that they don't fit your GUI editor. You can't refactor them or test them. A small change can cause even worse downstream issues which you may find out weeks later. 🤮
 
-Instead of workflows, with Amethyst you build teams of agents, and you instruct them in plain English like you'd talk to your human assistant or employees. Using them as abstractions, you can *compose* software applications and hierarchies of agents for high-level tasks, without being bogged down by low-level details. Good abstractions help us build complexity without making things complicated. 
+Instead of workflows, with Amethyst you build teams of agents, and you instruct them in plain English like you'd talk to your human assistant or employees. Using them as abstractions, you can *compose* software applications and hierarchies of agents for high-level tasks, without being bogged down by low-level details. Abstractions help us build complexity without making things complicated. 
 
 Amethyst is inspired by Ruby, and gives you radical simplicity while taking care of all the necessary complexity under the hood:
 - Guardrails for accuracy
-- Parallel processing
 - Executing large business workflows reliably
 - Auto-scaling for high availability
+- Parallel processing
 
 ### Amethyst Language
 
