@@ -4,11 +4,7 @@ AI-native programming language runtime.
 
 ## What is Amethyst?
 
-Amethyst reads like English and compiles to executable code:
-
-* **ACL (Casual)** – natural language with no syntax
-* **ASL (Semi-formal)** – structured natural English  
-* **AFL (Formal)** – fully structured and precise
+Amethyst reads like English and compiles to executable code.
 
 ## Quick Start
 
@@ -54,8 +50,8 @@ end if
 ## Architecture
 
 - `engine.py` - Execution runtime
-- `planner.py` - ACL→AFL compilation
-- `interpreter.py` - AFL interpretation
+- `planner.py` - Casual lang → Amethyst Language (AL) compilation
+- `interpreter.py` - AL interpretation
 - `executor.py` - Task execution
 - `memory.py` - Runtime state
 

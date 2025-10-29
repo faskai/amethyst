@@ -1,22 +1,78 @@
-# Amethyst Formal Language (AFL)
+# Amethyst Language (AL)
 
-AFL reads like natural English typed by non-technical users. Amethyst Casual Language (ACL) is even more casual and doesn’t require any syntax. The IDE automatically converts ACL to AFL.
+AL reads like natural English typed by non-technical users.
 
 ---
 
 ## 1) Core ideas (minimal nouns, natural verbs)
 
 * **entity** — anything that exists (people, cities, files, scenes)
-* **agent** — an entity that notices, decides, and acts
+* **agent** — an entity that decides, and acts
 * **tool** — an entity that performs I/O or side effects (unity, email)
 * **function** — a named capability; can live at top level or inside an entity
 * **event** — a trigger written as `when condition ... end when`
 
 ---
 
-## 2) Unified call and import shape
+## 2) Keywords
 
-**Canonical AFL invocation and import**
+* **Math verbs**: `add`, `reduce`, `multiply`, `divide` (`+ - * /` allowed as shortcuts)
+* **Assignment**: `set a : b`
+* **Conditionals**: `if <condition>  ... else if <condition> ... else ... end if`
+* **Events**: `when <condition>`, `end when`
+* **Comparisons**: `is`, `is not`, `is greater than`, `is less than or equal to`
+* **Boolean logic**: `and`, `or`, `not`
+* **Calling entities**: `use <namespace> - <entity-name> - <resource-name> <role>: <value>, <role>: <value>, ...`
+* **Entities**: `agent`, `tool`, `function`
+* **Loops**:
+  * `repeat 10 times ... end repeat`
+  * `repeat while <condition> ... end repeat`
+  * `repeat for each <item> in <list> ... end repeat`
+* **Break / Continue**: `stop loop`, `skip this`
+* **List operations**: `insert <a> into <b>`, `<x> to <y>` (generate a list of numbers from x to y)
+* **Async**: `in parallel`, `wait for`
+* **Multiline blocks**: `<name> <newline> ... end <name>`
+
+Whitespace and indentation have no meaning; newline, punctuation and keywords control scope and parsing.
+
+---
+
+## 3) Blocks – free text, no indentation
+
+* **Definition blocks**: `<name>` / `end <name>` keywords define scope. Example: `parallel ... end parallel`.
+* **Single-line statements**: written as complete English sentences (e.g., `parallel use ...`).
+
+**Example**
+
+```
+entity person
+name: Joe
+age: 25
+end entity
+
+agent world controller
+when player clicks npc
+if npc mood is friendly
+a: in parallel use dialogue - start conversation speaker: player, listener: npc
+b: in parallel use hud - show message: You made a friend
+wait for a, b
+else
+use combat - start fight attacker: player, defender: npc
+end if
+end when
+end agent
+
+parallel
+use unity - bake lightmaps
+use unity - build cities
+end parallel
+```
+
+---
+
+## 4) Unified call and import shape
+
+**Canonical AL invocation and import**
 
 ```
 use <entity> - <resource> <role>: <value>, <role>: <value>, ...
@@ -46,72 +102,6 @@ use model openai - GPT-4o temperature: 0.3
 
 ---
 
-## 3) Blocks — free text, no indentation
-
-* **Definition blocks**: start/end keywords define scope. Example: `start in parallel ... end parallel`.
-* **Single-line statements**: written as complete English sentences (e.g., `in parallel use ...`).
-
-**Example**
-
-```
-entity person
-name: Joe
-age: 25
-end entity
-
-agent world controller
-when player clicks npc
-if npc mood is friendly
-a: in parallel use dialogue - start conversation speaker: player, listener: npc
-b: in parallel use hud - show message: You made a friend
-wait for a, b
-else
-use combat - start fight attacker: player, defender: npc
-end if
-end when
-end agent
-
-start in parallel
-use unity - bake lightmaps
-use unity - build cities
-end parallel
-```
-
----
-
-## 4) Unified loops and conditions
-
-* **Conditionals**: `if condition  ... else if condition ... else ... end if`
-* **Comparisons**: `is`, `is not`, `is greater than`, `is less than or equal to`
-* **Boolean logic**: `and`, `or`, `not`
-* **Loops (single family)**:
-
-  * `repeat 10 times ... end repeat`
-  * `repeat while <condition> ... end repeat`
-  * `repeat for each <item> in <list> ... end repeat`
-* **Break / Continue**: `stop loop`, `skip this`
-* **Math verbs**: `add`, `reduce`, `multiply`, `divide` (`+ - * /` allowed as shortcuts)
-
----
-
-## 5) Minimal keyword set
-
-```
-set, add, reduce, multiply, divide      # + - * / allowed as shortcuts
-insert <a> into <b>, <x> to <y>         # list operations
-if, else
-repeat, end repeat                      # repeat 10 times / repeat while / repeat for each
-in parallel, wait for
-entity, agent, tool, function
-when, end when
-<name> <newline> ... end <name>         # start end of multiline blocks
-use, -                                  # dash connects entity and resource, args use role: value
-```
-
-Whitespace and indentation have no meaning; newline, punctuation and keywords control scope and parsing.
-
----
-
 | Category                   | Amethyst CL                   | Amethyst FL                                                                   | Python                                                   | Ruby                  | Notes                                 |
 | -------------------------- | ----------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------- | ------------------------------------- |
 | Define entity              | a person with name and age    | `entity person ... end entity`                                                | `class Person`                                           | `class Person`        | One form for definable things         |
@@ -129,7 +119,7 @@ Whitespace and indentation have no meaning; newline, punctuation and keywords co
 | Loops (collection)         | for each enemy                | `repeat for each enemy in enemies ... end repeat`                             | `for enemy in enemies`                                   | same                  | Collection may be inferred            |
 | Break/Continue             | stop / skip this              | `stop loop`, `skip this`                                                      | `break`, `continue`                                      | `break`, `next`       | Plain verbs                           |
 | Parallel (single-line)     | at the same time              | `in parallel use X - ...`                                                     | async/gather                                             | threads               | No `do` keyword                       |
-| Parallel (block)           | run these together            | `start in parallel ... end parallel`                                          | gather block                                             | threads               | Paragraph-style block                 |
+| Parallel (block)           | run these together            | `parallel ... end parallel`                                                   | gather block                                             | threads               | Paragraph-style block                 |
 | Wait                       | wait for both                 | `wait for a, b`                                                               | `await gather(a, b)`                                     | `join`                | Uses labels                           |
 | Events                     | when player clicks npc        | `when player clicks npc ... end when`                                         | callbacks                                                | blocks                | Native trigger                        |
 | Imports                    | use Unity                     | `use agent perplexity ai - browse`                                            | `import unity`                                           | `require`             | Unified import shape                  |

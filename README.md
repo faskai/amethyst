@@ -8,10 +8,8 @@ This doc is a whitepaper and outlines the vision and specs. The code will follo
 
 ### Who is Amethyst For
 Amethyst is for 2 user groups:
-* **Consumers** – Amethyst Casual Language (ACL) is free-flowing chat with no grammar rules or syntax. It's meant for non-tech casual users to easily build powerful AI agents and apps to automate homes, tasks, etc. You'll use a simple editor app that works on all devices.
-* **Developers** – Amethyst Formal Language (AFL) is structured, precise and scalable, but still is dead-simple and reads like natural English. It's meant for non-tech enterprise users. You can use an IDE and tools for managing Amethyst applications globally at scale.
-
-Both ACL and AFL supports debugging with breakpoints, uses abstractions and composability. The IDE will convert ACL to AFL.
+* **Consumers** – You can casually chat with AI to build Amethyst apps. No grammar rules or syntax needed. It's meant for non-tech casual users to easily build powerful AI agents and apps to automate homes, tasks, etc. You'll use a simple editor+chat app that works on all devices.
+* **Developers** – You'll write Amethyst Language directly, which is structured, precise and scalable, but still is dead-simple and reads like natural English. It's meant for non-tech enterprise users. You can use an IDE and tools for managing Amethyst applications globally at scale. Amethyst supports debugging with breakpoints, uses abstractions and composability.
 
 ### Why Amethyst
 Current multi-agent frameworks are great but still too complex.
@@ -47,8 +45,8 @@ else if rainy
 use open table to find and book any nice waterfront restaurant with PNW food
 end if
 
-a: in parallel use browser to book parking
-b: in parallel use todoist to plan todo and packing list
+a: parallel use browser to book parking
+b: parallel use todoist to plan todo and packing list
 wait for a, b
 
 use email to send the final plan
@@ -60,7 +58,7 @@ end agent
 * Every **agent** is a smart assistant that follows your instructions. `all trails`, `open table` are agents from AllTrails and OpenTable. `browser` automates web tasks; `email` sends messages; `todoist` manages to-dos.
 * **tools** — `get weather` is a tool.
 * You don’t need punctuation, brackets, or symbols — just sentences.
-* **Parallel tasks**: Add `a:` or `b:` before lines to label them, use `in parallel` key phrase, then `wait for a, b` to continue after both finish.
+* **Parallel tasks**: Add `a:` or `b:` before lines to label them, use `parallel` key phrase, then `wait for a, b` to continue after both finish.
 * **Conditions**: Use natural phrases like `if weather is sunny` or `else if rainy`.
 
 #### Multi-Agents
@@ -94,7 +92,7 @@ That's it! Amethyst agents will follow instructions and deliver results (e.g., a
 
 #### Behind the Scenes
 
-Amethyst converts ACL into ASL and AFL, that runs as Python code. The same file can be read like English, debugged like code, and executed by an intelligent engine.
+Amethyst engine converts casual chat into formal Amethyst Language (AL), that runs as Python code. The same file can be read like English, debugged like code, and executed by the intelligent engine.
 
 > 🧐 *Why not Ruby?* Python’s LLM and agent ecosystem is mature. The goal isn’t to mimic Ruby syntax but to achieve Ruby-like simplicity and readability.
 
@@ -154,7 +152,7 @@ As with any programming language there will be more docs and features around:
 * Seamless code gen: Just type or talk freely, and the IDE will automatically convert Casual Language to Formal Language.
 * Deploying, monitoring, scaling.
 * Inputs and triggers: what starts an agent or application? API call, webhook, user input, etc.
-* Chat with amethyst: Instead of writing .amt files, just send a message (ACL) and the agent will execute it.
+* Chat with amethyst: Instead of writing .amt files, just send a message and the agent will execute it.
 * Multiplayer chat with humans and agents for group collaborative editing.
 * Live multimodal agents: Agents that run continuously and can see, hear and read by processing a stream of data (audio, video, XR, streaming text).
 * Dynamic `blocks`: Agents will produce dynamic Amethyst `blocks` from streaming input which will be executed at runtime. It's basically like an Agent dynamically coding and executing it. You don't even need to write the Agent logic beforehand. For example:
