@@ -3,18 +3,18 @@
 Compiles ACL (casual) to AFL (formal) using AI.
 """
 
-import openai
-from dataclasses import asdict
-from pydantic import BaseModel
-from typing import Dict, List, Optional, Literal
 import json
+from typing import List, Literal
 
-from .syntax import AFL_COMPILER_INSTRUCTIONS, AFL_SYNTAX_SPEC
+import openai
+from pydantic import BaseModel
+
+from .syntax import AFL_COMPILER_INSTRUCTIONS
 
 
 class ExternalResource(BaseModel):
-    type: Literal["agent", "tool"]    
-    provider: Literal["amethyst", "external"]    
+    type: Literal["agent", "tool"]
+    provider: Literal["amethyst", "external"]
     name: str
 
 
@@ -25,12 +25,12 @@ class PlanResult(BaseModel):
 
 class Planner:
     """Compiles ACL (casual language) to AFL (formal language)."""
-    
+
     def __init__(self, provider, verbose: bool = False):
         self.provider = provider
         self.openai = openai.OpenAI()
         self.verbose = verbose
-    
+
     def compile(self, acl: str, available_resources: list) -> dict:
         """Compile ACL to AFL+ASL (.amt format) code."""
         prompt = f"""Instructions:
@@ -41,12 +41,12 @@ Resources:
 
 ACL Input:
 {acl}"""
-        
+
         response = self.openai.responses.parse(
             model="gpt-5-mini",
             tools=[self.provider.get_discovery_mcp_config()],
             input=[{"role": "user", "content": prompt}],
-            text_format=PlanResult
+            text_format=PlanResult,
         )
 
         if self.verbose:

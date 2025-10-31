@@ -5,7 +5,7 @@ Translation logic is in compiler.py.
 
 Language Levels:
 - ACL (Casual): Free-flowing chat with no grammar rules
-- ASL (Semi-formal): Slightly structured, natural English (used for agent instructions)  
+- ASL (Semi-formal): Slightly structured, natural English (used for agent instructions)
 - AFL (Formal): Fully structured and precise (used for fast programming)
 """
 

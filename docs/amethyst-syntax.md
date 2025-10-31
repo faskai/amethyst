@@ -11,6 +11,7 @@ AL reads like natural English typed by non-technical users.
 * **tool** — an entity that performs I/O or side effects (unity, email)
 * **function** — a named capability; can live at top level or inside an entity
 * **event** — a trigger written as `when condition ... end when`
+* **env** - The container of everything: time, space, global rules, and resources. Can represent Browser, Mac, virtual game worlds, etc.
 
 ---
 

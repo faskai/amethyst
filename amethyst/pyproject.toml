@@ -20,6 +20,20 @@ python-dotenv = ">=1.0.0,<2.0.0"
 pipedream = ">=1.0.10,<2.0.0"
 pydantic = ">=2.12.3,<3.0.0"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.14.3"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E", "I"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["amethyst"]
