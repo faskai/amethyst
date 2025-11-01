@@ -5,7 +5,7 @@ from typing import List
 
 from pipedream import Pipedream
 
-from amethyst.planner import ExternalResource
+from amethyst_engine.planner import ExternalResource
 
 from .provider import ToolProvider
 

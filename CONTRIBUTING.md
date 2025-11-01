@@ -1,192 +1,97 @@
-# Contributing to Amethyst AI
+# Contributing to Amethyst
 
-Welcome! We're excited you're considering contributing to **Amethyst**, the world's first AI-native language and IDE to build composite agents.
+Welcome! We're building the first AI-native programming language.
 
-Our mission is to make building AI agents as easy as writing natural language – no boilerplate, no brittle workflows, just clean, powerful, composable AI programs.
+## Quick Setup
 
+### 1. Environment Setup
+```bash
+# Clone repo
+git clone https://github.com/fask/amethyst
+cd amethyst
 
----
+# Install engine dependencies
+cd packages/engine
+poetry install
+cp .env.example .env
+# Edit .env and add:
+# - OPENAI_API_KEY
+# - PIPEDREAM_PROJECT_ID, PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET
 
-## 🛠️ Getting Started
+# Install API dependencies
+cd ../../apps/api
+poetry install
+```
 
-1. Clone the repo: `git clone https://github.com/fask/amethyst`
-2. Choose a folder you're interested in (`compiler`, `ide`, or `platform`)
-3. Follow the README or `setup.md` in that folder (coming soon)
+### 2. Run Tests
+```bash
+# Terminal 1: Start test server (provides agents & tools)
+cd packages/engine/tests
+poetry run python unified_server.py
 
----
+# Terminal 2: Run engine tests
+poetry run python cognitive_engine/test_cognitive_engine.py
+```
 
-## 🤝 How to Contribute
+### 3. Run API Server
+```bash
+cd apps/api
+poetry run uvicorn main:app --reload --port 8000
 
-We welcome contributions of all kinds:
+# Visit http://localhost:8000/docs for API documentation
+```
 
-- 🚀 Code (features, bug fixes, refactors)
-- 📄 Docs (tutorials, architecture, FAQs)
-- 🧪 Tests (unit, integration, regression)
-- 🔌 Plugins (tools, agents, integrations)
-
-Steps:
-1. Open an issue or find one tagged `good first issue`
-2. Fork and create a branch
-3. Commit using clear messages (e.g., `feat: add @calendar_agent`)
-4. Submit a Pull Request (PR) — we’ll review ASAP
-
----
-
-## 🔮 Architecture
-Coming Soon
-
----
-
-## 📁 Project Structure
-
-Amethyst follows a modular architecture with clear separation between the compiler, IDE, and platform components.
-
-### **🏗️ Overall Architecture**
+## Architecture
 
 ```
 amethyst/
-├── 📄 README.md                    # Main project documentation & vision
-├── 📄 CONTRIBUTING.md              # This file
-├── 📄 LICENSE                      # MIT License
-├── 📄 package.json                 # Root package configuration
-├── 📁 compiler/                    # 🚧 **WIP** - Core compiler
-├── 📁 ide/                         # 🚧 **PLANNED** - IDE applications
-├── 📁 platform/                    # 🚧 **PLANNED** - SaaS platform services
-└── 📁 docs/                        # 📝 **EMPTY** - Documentation
+├── apps/                 # Deployable applications
+│   ├── api/             # FastAPI server
+│   ├── web/             # Future: Next.js (free tier)
+│   ├── web-pro/         # Future: Next.js (paid tier)
+│   └── ios/             # Future: React Native
+│
+└── packages/            # Libraries and SDKs
+    ├── engine/          # Execution engine (internal)
+    ├── python/          # Future: Python SDK → "amethyst" on PyPI
+    ├── node/            # Future: Node SDK → "amethyst" on npm
+    ├── react/           # Future: React SDK → "@amethyst/react" on npm
+    └── ui/              # Future: Shared UI components
 ```
 
-### **🔧 Compiler**
+### How It Works
+1. **Planner** - Compiles casual language to formal Amethyst Language (AL)
+2. **Interpreter** - Reads AL and determines execution steps
+3. **Executor** - Executes agent calls, tool calls
+4. **Memory** - Tracks runtime state and results
 
-**Location**: `compiler/`
+## Contributing
 
-**Structure**:
-```
-compiler/
-├── 📁 src/amethyst_compiler/        # Canonical Python package
-│   ├── 📄 __init__.py               # Package exports
-│   ├── 📄 parser.py                 # AmethystParser class
-│   ├── 📄 runtime.py                # AmethystCompiler class
-│   └── 📄 amethyst_types.py         # Type definitions
-├── 📁 tests/                        # Test suite
-│   ├── 📄 run_test.py               # Main test runner
-│   ├── 📄 test_agent.amt            # Basic syntax test
-│   ├── 📄 readme_example.amt        # README syntax test
-│   ├── 📄 test_readme_syntax.py     # README test runner
-│   ├── 📄 hello_world_agent.py      # A2A agent implementation
-│   └── 📄 run_hello_world_server.py # Server runner
-├── 📄 pyproject.toml                # Poetry configuration
-├── 📄 poetry.lock                   # Dependency lock file
-└── 📄 README.md                     # Compiler documentation
-```
+### Code
+1. Fork and create a branch
+2. Make changes following existing patterns
+3. Keep changes minimal and focused
+4. Submit a PR with clear description
 
-**Getting Started with Compiler**:
-```bash
-cd compiler
-poetry install
-cd tests
-python run_test.py
-```
+### Areas to Contribute
+- Engine features (conditionals, loops, error handling)
+- Agent integrations (using a2a-sdk)
+- Tool integrations (using MCP)
+- API endpoints
+- Documentation
+- Tests
 
-### **💻 IDE (🚧 PLANNED)**
+## Code Style
+- Python: Follow existing style, use ruff for linting
+- Keep functions small and focused
+- Add docstrings for public APIs
+- No unnecessary abstractions
 
-**Location**: `ide/`
-**Status**: **Planning Phase** - NextJS TypeScript projects
-
-**Structure**:
-```
-ide/
-├── 📁 consumer/                   # Consumer-facing IDE
-│   └── 📄 README.md               # TODO: NextJS TS project
-└── 📁 dev/                        # Developer IDE
-    └── 📄 README.md               # TODO: NextJS TS project
-```
-
-**Planned Features**:
-- 🎯 **Consumer IDE**: Simple GUI for non-technical users
-- 🛠️ **Developer IDE**: Advanced tools for debugging, observability, breakpoints, step-through execution
-- 📊 **Observability**: Real-time agent monitoring
-
-### **🌐 Platform (🚧 PLANNED)**
-
-**Location**: `platform/`
-**Status**: **Planning Phase** - SaaS platform built with NestJS/NextJS TypeScript projects
-
-**Structure**:
-```
-platform/
-├── 📁 api/                         # Backend API services
-│   └── 📄 README.md               # TODO: NestJS TS project (REST APIs)
-├── 📁 enterprise/                  # Enterprise platform
-│   └── 📄 README.md               # TODO: NextJS TS project
-└── 📁 consumer/                    # Consumer platform
-    └── 📄 README.md               # TODO: NextJS TS project
-```
-
-**Planned Features**:
-- 🔌 **API Layer**: REST APIs for agent orchestration and management
-- 🏢 **Enterprise**: Advanced deployment, monitoring, scaling
-- 👥 **Consumer**: Simple user interface for agent creation, ChatGPT-like.
-- 🔐 **Authentication**: OAuth flows for external integrations
-- 📦 **Package Management**: npm/pip-like package system
-
-### **👥 Target User Groups**
-
-**1. Consumers** 
-- Non-tech users building AI sidekicks
-- Home automation enthusiasts, managers, founders, etc.
-- Simple GUI IDE experience
-
-**2. Developers**
-- Enterprise users building large-scale applications
-- Advanced debugging and observability tools
-- Global deployment and management
-
-### **📊 Current Status**
-
-| Component | Status | Description |
-|-----------|--------|-------------|
-| **Compiler** | 🚧 **WIP** | Tested A2A communication |
-| **IDE Consumer** | 🚧 **Planned** | NextJS TS project |
-| **IDE Developer** | 🚧 **Planned** | NextJS TS project |
-| **Platform API** | 🚧 **Planned** | NestJS TS project |
-| **Platform Enterprise** | 🚧 **Planned** | NextJS TS project |
-| **Platform Consumer** | 🚧 **Planned** | NextJS TS project |
-
-### **🎯 Contribution Areas**
-
-**Ready for Contributions**:
-- ⚙️ **Core Features**: MCP tool calling `@tool_name`, task state management 
-- 🧪 **Compiler Tests**: Add more test cases, edge cases
-- 📚 **Documentation**: API docs, tutorials, examples
-- 🔌 **Agent Integrations**: Create new agents using a2a-sdk
-- 🐛 **Bug Fixes**: Compiler edge cases, parser improvements
-
-**Coming Soon**:
-- 💻 **IDE Development**: NextJS TypeScript projects
-- 🌐 **Platform Services**: NestJS backend APIs
-- 🔧 **DevOps**: CI/CD, deployment, monitoring
-- 🎨 **UI/UX**: Design system, components
+## Communication
+- GitHub Issues for bugs and features
+- Discussions for questions
+- PRs for code contributions
 
 ---
 
-## 🔐 License & Contributor Rights
-
-This project is licensed under the [Apache 2.0 License](./LICENSE). Given it's OSS anyone can contribute, even if you're employed by Big Tech.
-
----
-
-## 💬 Communication
-
-- GitHub Issues and Discussions for questions
-- Discord/Slack community coming soon
-- Weekly roadmap updates in the repo
-
----
-
-## ❤️ Code of Conduct
-
-Please treat others with respect and curiosity. Be kind, be constructive, and remember — we’re all here to make agents (and therefore humans) awesome.
-
----
-
-Thank you for being part of the Amethyst journey!
+Thank you for contributing to Amethyst!

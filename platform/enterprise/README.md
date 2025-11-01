@@ -1,1 +1,0 @@
-TODO: NextJS TS project

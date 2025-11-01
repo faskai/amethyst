@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "amethyst"
+name = "amethyst-engine"
 version = "0.1.0"
-description = "AI-native programming language"
+description = "Amethyst execution engine"
 authors = ["Arko Bhattacharya <arko@fask.ai>"]
 readme = "README.md"
-packages = [{include = "amethyst", from = "src"}]
+packages = [{include = "amethyst_engine", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -36,4 +36,4 @@ select = ["F", "E", "I"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["amethyst"]
+known-first-party = ["amethyst_engine"]

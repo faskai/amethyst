@@ -1,0 +1,9 @@
+{
+  "name": "amethyst-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:api": "cd apps/api && poetry run uvicorn main:app --reload --port 8000",
+    "test:engine": "cd packages/engine && poetry run python tests/cognitive_engine/test_cognitive_engine.py"
+  }
+}
+

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from amethyst.planner import ExternalResource
+from amethyst_engine.planner import ExternalResource
 
 
 class ToolProvider(ABC):
