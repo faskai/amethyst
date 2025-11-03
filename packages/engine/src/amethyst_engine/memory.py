@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 class TaskType(Enum):
     TOOL_CALL = "tool_call"
     AGENT_CALL = "agent_call"
+    AMT_AGENT_RESULT = "amt_agent_result"
 
 
 class StepType(Enum):
@@ -23,10 +24,10 @@ class StepType(Enum):
 class Task:
     """Executable task (agent call or tool call)."""
 
-    id: str
-    resource_name: str
-    task_type: TaskType
-    parameters: Dict[str, Any]
+    id: str = None
+    resource_name: str = None
+    task_type: TaskType = None
+    parameters: Dict[str, Any] = None
     is_async: bool = False
     result: Any = None
     async_task: Any = field(default=None, init=False)
@@ -41,39 +42,25 @@ class Step:
 
 
 class Memory:
-    """Runtime state storage."""
+    """Runtime state storage - simple data container."""
 
     def __init__(self):
-        self.tasks_by_id: Dict[str, Task] = {}
-        self.completed_steps: List[Step] = []
+        self.tasks: Dict[str, Task] = {}
+        self.steps: List[Step] = []
+        self.files: List[Dict[str, Any]] = []
 
-    def add_task(self, task: Task) -> None:
-        self.tasks_by_id[task.id] = task
-
-    def add_step(self, step: Step) -> None:
-        self.completed_steps.append(step)
-
-    def get_task(self, task_id: str) -> Task:
-        return self.tasks_by_id[task_id]
-
-    def get_full_context(self) -> str:
-        """Get full memory context for interpreter."""
-        lines = []
-
-        completed_tasks = [t for t in self.tasks_by_id.values() if t.result]
-        if completed_tasks:
-            lines.append("Completed tasks:")
-            for t in completed_tasks:
-                lines.append(f"  - {t.resource_name}: {str(t.result)}")
-
-        if self.completed_steps:
-            lines.append("\nCompleted steps:")
-            for s in self.completed_steps:
-                lines.append(f"  - {s.step_type.value} for tasks: {', '.join(s.task_ids)}")
-
-        return "\n".join(lines) if lines else "No tasks or steps completed yet"
-
-    def get_summary(self) -> str:
-        """Get summary of completed tasks."""
-        completed = [t for t in self.tasks_by_id.values() if t.result]
-        return "\n".join([f"- {t.resource_name}: {t.result}" for t in completed])
+    def get_context(self) -> dict:
+        """Get tasks and steps for interpreter context."""
+        return {
+            "tasks": [
+                {
+                    "id": t.id,
+                    "resource_name": t.resource_name,
+                    "task_type": t.task_type.value,
+                    "result": t.result,
+                }
+                for t in self.tasks.values()
+                if t.result
+            ],
+            "files": self.files,
+        }

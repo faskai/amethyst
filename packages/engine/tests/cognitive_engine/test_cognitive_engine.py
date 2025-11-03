@@ -14,7 +14,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from amethyst_engine import Engine
-from amethyst_engine.types import Resource
+from amethyst_engine.app import Resource
 
 
 async def check_server(url: str, timeout: float = 2.0) -> bool:

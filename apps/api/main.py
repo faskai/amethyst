@@ -1,20 +1,19 @@
 """Amethyst API Server."""
 
-from typing import List
+import asyncio
+import json
+import logging
 
 from amethyst_engine import Engine
-from amethyst_engine.types import Resource
-from fastapi import FastAPI, HTTPException
+from amethyst_engine.app import AmtFile, App, Resource
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
 
-app = FastAPI(
-    title="Amethyst API",
-    version="0.1.0",
-    description="AI-native programming language API",
-)
+logging.basicConfig(level=logging.INFO)
 
-# CORS for frontend
+app = FastAPI(title="Amethyst API", version="0.1.0")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001"],
@@ -24,42 +23,28 @@ app.add_middleware(
 )
 
 
-class RunRequest(BaseModel):
-    code: str
-    resources: List[dict] = []
+@app.post("/run")
+async def run_app(request: Request):
+    body = await request.json()
 
+    async def stream():
+        messages = asyncio.Queue()
 
-class RunResponse(BaseModel):
-    status: str
-    code: str
-    result: str
-
-
-@app.post("/v1/run", response_model=RunResponse)
-async def run_code(request: RunRequest):
-    """Execute Amethyst code."""
-    try:
-        # Convert to Resource objects
-        resources = [Resource(**r) for r in request.resources]
-
-        # Execute with engine
-        engine = Engine(verbose=False)
-        result = await engine.run(request.code, resources=resources)
-
-        return RunResponse(
-            status=result.get("status", "completed"),
-            code=result.get("code", ""),
-            result=result.get("result", ""),
+        app_obj = App(
+            files=[AmtFile(**f) for f in body["files"]],
+            resources={r["name"]: Resource(**r) for r in body.get("resources", [])},
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
+        engine = Engine(send_update=messages.put_nowait, verbose=True)
+        task = asyncio.create_task(engine.run(app_obj))
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "version": "0.1.0"}
+        while not task.done() or not messages.empty():
+            if not messages.empty():
+                update = await messages.get()
+                yield f"data: {json.dumps(update)}\n\n"
+            await asyncio.sleep(0)
 
+        result = await task
+        yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
 
-@app.get("/")
-async def root():
-    return {"service": "Amethyst API", "docs": "/docs", "health": "/health"}
+    return StreamingResponse(stream(), media_type="text/event-stream")

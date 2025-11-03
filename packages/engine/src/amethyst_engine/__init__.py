@@ -1,8 +1,8 @@
 """Amethyst: AI-native programming language runtime."""
 
 # High-level API
+from .app import Resource
 from .engine import Engine
-from .types import Resource
 
 # Legacy alias
 AmethystEngine = Engine
@@ -10,7 +10,7 @@ AmethystEngine = Engine
 __version__ = "0.1.0"
 
 __all__ = [
-    'Engine',
-    'AmethystEngine',
-    'Resource',
+    "Engine",
+    "AmethystEngine",
+    "Resource",
 ]

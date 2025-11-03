@@ -2,12 +2,13 @@ agent slack assistant
 
 send slack message about weather forecast
 
-use get weather to check weather
-
-use slack - post message: channel: general, content: Weather forecast: {weather}
+use get-weather to check weather
 
 if rainy
-use email - recipient: arko@fask.ai, subject: Rain alert, content: The weather forecast is rainy. This is an automated alert.
+use slack - send message: channel: general, text: It's rainy today — expect rain.
+use email - send email: recipient: arko@fask.ai, subject: Rainy weather alert, content: The weather forecast shows rain today.
+else
+use slack - send message: channel: general, text: The weather is not rainy today.
 end if
 
 end agent

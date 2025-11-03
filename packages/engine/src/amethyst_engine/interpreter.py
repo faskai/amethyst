@@ -1,148 +1,148 @@
 """Amethyst code interpretation.
 
-Interprets AFL code to determine next execution steps.
+Interprets Amethyst code to determine next execution steps.
 """
 
 import json
-import os
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
-import openai
-from dotenv import load_dotenv
+from pydantic import BaseModel
 
+from .llm import LLM
 from .memory import Step, StepType, Task, TaskType
-from .syntax import AFL_INTERPRETER_INSTRUCTIONS
+from .syntax import AMT_INTERPRETER_INSTRUCTIONS
+
+
+class ResponseModel(BaseModel):
+    task_id: str
+    result: str
 
 
 class Interpreter:
-    """Interprets AFL code to determine execution steps."""
+    """Interprets Amethyst code to determine execution steps."""
 
-    def __init__(self, verbose: bool = False):
-        load_dotenv()
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    def __init__(self, send_update: Callable, verbose: bool = False):
+        self.llm = LLM(send_update=send_update, verbose=verbose)
         self.verbose = verbose
-        self.conversation_history = []
+        self.send_update = send_update
 
     async def interpret(
         self,
         instructions: str,
-        memory: str,
-        current_position: int,
+        memory: dict,
         available_resources: List[Dict[str, str]],
         mcp_tools: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Interpret AFL+ASL and execute external tools via MCP."""
+        """Interpret Amethyst code and execute external tools via MCP."""
         resources_json = json.dumps(available_resources, indent=2)
         tools = mcp_tools.copy()
 
         tools.extend(
             [
-                {
-                    "type": "function",
-                    "name": "create_task",
-                    "description": "Create task for delegation (A2A calls, Amethyst tool calls)",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "type": "string",
-                                "description": "Create an id in this format: task-<line-number>-<name-of-the-task>",
-                            },
-                            "resource_name": {
-                                "type": "string",
-                                "description": "Resource name to call",
-                            },
-                            "task_type": {
-                                "type": "string",
-                                "enum": ["agent_call", "tool_call"],
-                            },
-                            "parameters": {
-                                "type": "object",
-                                "description": "Tool call parameters",
-                            },
-                            "instructions": {
-                                "type": "string",
-                                "description": "Agent call instructions in natural language",
-                            },
-                            "is_async": {"type": "boolean"},
-                            "next_position": {
-                                "type": "integer",
-                                "description": "Next line to execute",
-                            },
-                        },
-                        "required": [
-                            "id",
-                            "resource_name",
-                            "task_type",
-                            "next_position",
-                        ],
-                    },
-                },
-                {
-                    "type": "function",
-                    "name": "create_step",
-                    "description": "Create control flow step (await). Provide the task ids to await.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "step_type": {"type": "string", "enum": ["await"]},
-                            "task_ids": {"type": "array", "items": {"type": "string"}},
-                            "next_position": {
-                                "type": "integer",
-                                "description": "Next line to execute",
-                            },
-                        },
-                        "required": ["step_type", "task_ids", "next_position"],
-                    },
-                },
-                {
-                    "type": "function",
-                    "name": "complete_execution",
-                    "description": "Done - set next_position to -1",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "next_position": {
-                                "type": "integer",
-                                "description": "Set to -1 when done",
-                            }
-                        },
-                        "required": ["next_position"],
-                    },
-                },
+                # {
+                #     "type": "function",
+                #     "name": "create_task",
+                #     "description": (
+                #         "Create task for delegation (A2A calls, Amethyst tool calls)."
+                #         "Only applicable when the corresponding resource provider is 'amethyst'."
+                #     ),
+                #     "parameters": {
+                #         "type": "object",
+                #         "properties": {
+                #             "id": {
+                #                 "type": "string",
+                #                 "description": (
+                #                     "Create an id in this format: "
+                #                     "task-<line-number>-<name-of-the-task>"
+                #                 ),
+                #             },
+                #             "resource_name": {
+                #                 "type": "string",
+                #                 "description": "Resource name to call",
+                #             },
+                #             "task_type": {
+                #                 "type": "string",
+                #                 "enum": ["agent_call", "tool_call"],
+                #             },
+                #             "parameters": {
+                #                 "type": "object",
+                #                 "description": "Tool call parameters",
+                #             },
+                #             "instructions": {
+                #                 "type": "string",
+                #                 "description": "Agent call instructions in natural language",
+                #             },
+                #             "is_async": {"type": "boolean"},
+                #             "next_position": {
+                #                 "type": "integer",
+                #                 "description": "Next line to execute",
+                #             },
+                #         },
+                #         "required": [
+                #             "id",
+                #             "resource_name",
+                #             "task_type",
+                #             "next_position",
+                #         ],
+                #     },
+                # },
+                # {
+                #     "type": "function",
+                #     "name": "create_step",
+                #     "description": (
+                #         "Create control flow step (await). Provide the task ids to await."
+                #     ),
+                #     "parameters": {
+                #         "type": "object",
+                #         "properties": {
+                #             "step_type": {"type": "string", "enum": ["await"]},
+                #             "task_ids": {"type": "array", "items": {"type": "string"}},
+                #             "next_position": {
+                #                 "type": "integer",
+                #                 "description": "Next line to execute",
+                #             },
+                #         },
+                #         "required": ["step_type", "task_ids", "next_position"],
+                #     },
+                # },
             ]
         )
 
-        numbered_code = "\n".join(
-            [
-                f"{'>>>' if i == current_position else '   '} {i:3d}: {line}"
-                for i, line in enumerate(instructions.split("\n"))
-            ]
-        )
-
-        input = [
+        memory_json = json.dumps(memory, indent=2)
+        messages = [
             {
                 "role": "system",
-                "content": f"{AFL_INTERPRETER_INSTRUCTIONS}\n\nResources:\n{resources_json}",
+                "content": (f"{AMT_INTERPRETER_INSTRUCTIONS}\n\nResources:\n{resources_json}"),
             },
-            *self.conversation_history,
             {
                 "role": "user",
-                "content": f"Code (>>> marks current line):\n{numbered_code}\n\nMemory:\n{memory}",
+                "content": (f"Memory:\n{memory_json}\n\nCode:\n{instructions}"),
             },
         ]
 
-        response = self.client.responses.create(model="gpt-5-mini", tools=tools, input=input)
-        self.conversation_history.extend(response.output)
-
         tasks, steps = [], []
-        next_position = -1
 
-        for item in response.output:
+        final_response = await self.llm.stream(
+            messages=messages, text_format=ResponseModel, tools=tools
+        )
+
+        # Handle parsed response (no function calls)
+        if hasattr(final_response, "output_parsed"):
+            parsed = final_response.output_parsed
+            tasks.append(
+                Task(
+                    id=parsed.task_id,
+                    resource_name="",
+                    task_type=TaskType.AMT_AGENT_RESULT,
+                    is_async=False,
+                    result=parsed.result,
+                )
+            )
+
+        # Handle function calls
+        for item in final_response.output:
             if item.type == "function_call":
                 args = json.loads(item.arguments)
-                next_position = args["next_position"]
-
                 if item.name == "create_task":
                     tasks.append(
                         Task(
@@ -161,15 +161,7 @@ class Interpreter:
                         )
                     )
 
-                self.conversation_history.append(
-                    {
-                        "type": "function_call_output",
-                        "call_id": item.call_id,
-                        "output": json.dumps({"status": "success"}),
-                    }
-                )
-
-            if self.verbose:
-                print(f"\n🤖 INTERPRETER: {json.dumps(item.model_dump(), indent=2)}")
-
-        return {"tasks": tasks, "steps": steps, "next_position": next_position}
+        return {
+            "tasks": tasks,
+            "steps": steps,
+        }

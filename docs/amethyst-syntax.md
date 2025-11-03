@@ -1,6 +1,6 @@
-# Amethyst Language (AL)
+# Amethyst Language (AMT)
 
-AL reads like natural English typed by non-technical users.
+AMT reads like natural English typed by non-technical users.
 
 ---
 
@@ -73,7 +73,7 @@ end parallel
 
 ## 4) Unified call and import shape
 
-**Canonical AL invocation and import**
+**Canonical AMT invocation and import**
 
 ```
 use <entity> - <resource> <role>: <value>, <role>: <value>, ...

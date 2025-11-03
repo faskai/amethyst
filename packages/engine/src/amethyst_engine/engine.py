@@ -1,21 +1,25 @@
 """Amethyst execution engine.
 
 The Engine orchestrates the compilation and execution of Amethyst code:
-- Planner: Compiles ACL (casual) to AFL (formal)
-- Interpreter: Interprets AFL and determines execution steps
+- Planner: Compiles casual language to Amethyst syntax
+- Interpreter: Interprets Amethyst code and determines execution steps
 - Executor: Executes tasks (agent calls, tool calls)
 - Memory: Tracks runtime state and results
 """
 
 import asyncio
+import logging
+from typing import Callable
 
 from dotenv import load_dotenv
 
-from . import types
+from .app import App, Resource
 from .executor import call_agent, call_tool
 from .hydrator import ResourceHydrator
 from .interpreter import Interpreter
 from .memory import Memory, StepType, TaskType
+
+logger = logging.getLogger(__name__)
 
 
 class Engine:
@@ -23,19 +27,14 @@ class Engine:
 
     Orchestrates compilation and execution:
     Planner → Interpreter → Executor
-
-    Example:
-        >>> engine = Engine(verbose=True)
-        >>> resources = [Resource(type="tool", name="weather", url="...")]
-        >>> result = await engine.run("get the weather", resources=resources)
     """
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, send_update: Callable, verbose: bool = False):
         load_dotenv()
 
         self.memory = Memory()
-        self.registry = types.ResourceRegistry()
         self.verbose = verbose
+        self.send_update = send_update
 
         from .providers.pipedream import PipedreamProvider
 
@@ -43,54 +42,71 @@ class Engine:
 
         from .planner import Planner
 
-        self.planner = Planner(self.provider, verbose=verbose)
-
+        self.planner = Planner(self.provider, send_update=send_update, verbose=verbose)
         self.hydrator = ResourceHydrator()
 
-    async def run(self, acl: str, resources: list[types.Resource]) -> dict:
-        """Run Amethyst code."""
-        await self.hydrator.hydrate_resources(resources)
-        for resource in resources:
-            self.registry.register_resource(resource)
+        if verbose:
+            logging.basicConfig(level=logging.INFO)
 
-        plan = self.planner.compile(acl, self.registry.list_resources())
+    async def run(self, app: App) -> dict:
+        """Run Amethyst app with multiple files."""
+        self.send_update({"type": "progress", "message": "Starting app"})
 
-        for r in plan["resources"]:
-            self.registry.register_resource(types.Resource(**r))
+        await self.hydrator.hydrate_resources(list(app.resources.values()))
 
-        needs_oauth = [r for r in plan["resources"] if r.get("connection_status") == "needs_oauth"]
-        if needs_oauth:
-            return {
-                "status": "oauth_required",
-                "code": plan["code"],
-                "resources": plan["resources"],
-            }
+        for idx, amt_file in enumerate(app.files, 1):
+            self.send_update(
+                {"type": "progress", "message": f"Processing file {idx}/{len(app.files)}"}
+            )
 
-        result = await self.execute(plan["code"])
-        return {"status": "completed", "code": plan["code"], "result": result}
+            compiled_plan = await self.planner.compile(
+                amt_file.content, app.list_resources(), self.memory.get_context()
+            )
+            self.memory.files.append({"content": {"amt_agents": compiled_plan["amt_agents"]}})
 
-    async def execute(self, instructions: str) -> str:
+            for r in compiled_plan["resources"]:
+                resource = Resource(**r)
+                app.resources[resource.name] = resource
+
+            needs_oauth = [
+                r for r in compiled_plan["resources"] if r.get("connection_status") == "needs_oauth"
+            ]
+            if needs_oauth:
+                self.send_update({"type": "oauth_required", "resources": needs_oauth})
+                return {"status": "oauth_required", "resources": needs_oauth}
+
+            await self.execute(self.memory.files[-1], app)
+            self.send_update({"type": "progress", "message": f"Completed file {idx}"})
+
+        self.send_update({"type": "progress", "message": "App execution completed"})
+        return {"status": "completed", "memory": self.memory.get_context()}
+
+    async def execute(self, file: dict, app: App) -> dict:
         """Execute compiled AFL code."""
-        interpreter = Interpreter(verbose=self.verbose)
-        mcp_tools = self.provider.get_execution_mcp_config(self.registry.list_resources())
-        position = 0
+        mcp_tools = self.provider.get_execution_mcp_config(app.list_resources())
+        interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
 
-        while position >= 0:
-            plan = await interpreter.interpret(
-                instructions=instructions,
-                memory=self.memory.get_full_context(),
-                current_position=position,
-                available_resources=self.registry.list_resources(),
+        for amt_agent in file["content"]["amt_agents"]:
+            self.send_update({"type": "progress", "message": f"Interpreting agent: {amt_agent}"})
+            execution_plan = await interpreter.interpret(
+                instructions=amt_agent,
+                memory=self.memory.get_context(),
+                available_resources=app.list_resources(),
                 mcp_tools=mcp_tools,
             )
 
-            for task in plan["tasks"]:
-                self.memory.add_task(task)
-
+            for task in execution_plan["tasks"]:
+                self.memory.tasks[task.id] = task
+                self.send_update(
+                    {
+                        "type": "progress",
+                        "message": f"Task: {task.task_type} - resource: {task.resource_name}",
+                    }
+                )
                 if task.task_type == TaskType.AGENT_CALL:
-                    coro = call_agent(task.resource_name, task.parameters, self.registry)
+                    coro = call_agent(task.resource_name, task.parameters, app.resources)
                 elif task.task_type == TaskType.TOOL_CALL:
-                    coro = call_tool(task.resource_name, task.parameters, self.registry)
+                    coro = call_tool(task.resource_name, task.parameters, app.resources)
                 else:
                     continue
 
@@ -98,18 +114,20 @@ class Engine:
                     task.async_task = asyncio.create_task(coro)
                 else:
                     task.result = await coro
+                    self.send_update(
+                        {"type": "progress", "message": f"Completed: {task.resource_name}"}
+                    )
 
-            for step in plan["steps"]:
+            for step in execution_plan["steps"]:
                 if step.step_type == StepType.AWAIT:
+                    self.send_update({"type": "progress", "message": "Waiting for async tasks"})
                     await self._await_tasks(step.task_ids)
-                    self.memory.add_step(step)
+                    self.memory.steps.append(step)
 
-            position = plan["next_position"]
-
-        return self.memory.get_summary()
+        return self.memory.get_context()
 
     async def _await_tasks(self, task_ids):
         """Wait for tasks and store results."""
         for task_id in task_ids:
-            task = self.memory.get_task(task_id)
+            task = self.memory.tasks[task_id]
             task.result = await task.async_task

@@ -1,56 +1,60 @@
 """Amethyst code compilation.
 
-Compiles ACL (casual) to AFL (formal) using AI.
+Compiles casual language to Amethyst syntax using AI.
 """
 
 import json
-from typing import List, Literal
+from typing import Callable, List, Literal
 
-import openai
 from pydantic import BaseModel
 
-from .syntax import AFL_COMPILER_INSTRUCTIONS
+from .llm import LLM
+from .syntax import AMT_COMPILER_INSTRUCTIONS
 
 
 class ExternalResource(BaseModel):
-    type: Literal["agent", "tool"]
+    type: Literal["a2a_agent", "tool"]
     provider: Literal["amethyst", "external"]
     name: str
 
 
 class PlanResult(BaseModel):
-    code: str
+    amt_agents: List[str] = []
     resources: List[ExternalResource] = []
 
 
 class Planner:
-    """Compiles ACL (casual language) to AFL (formal language)."""
+    """Compiles casual language to Amethyst syntax using AI."""
 
-    def __init__(self, provider, verbose: bool = False):
+    def __init__(self, provider, send_update: Callable, verbose: bool = False):
         self.provider = provider
-        self.openai = openai.OpenAI()
+        self.llm = LLM(send_update=send_update, verbose=verbose)
+        self.send_update = send_update
         self.verbose = verbose
 
-    def compile(self, acl: str, available_resources: list) -> dict:
-        """Compile ACL to AFL+ASL (.amt format) code."""
-        prompt = f"""Instructions:
-{AFL_COMPILER_INSTRUCTIONS}
+    async def compile(self, acl: str, available_resources: list, memory: dict) -> dict:
+        """Compile casual language to Amethyst syntax using AI."""
+
+        prompt = f"""
+Memory:
+{json.dumps(memory)}
+
+Instructions:
+{AMT_COMPILER_INSTRUCTIONS}
 
 Resources:
 {json.dumps(available_resources)}
 
-ACL Input:
+Casual language input:
 {acl}"""
 
-        response = self.openai.responses.parse(
-            model="gpt-5-mini",
-            tools=[self.provider.get_discovery_mcp_config()],
-            input=[{"role": "user", "content": prompt}],
-            text_format=PlanResult,
-        )
+        messages = [{"role": "user", "content": prompt}]
+        tools = [self.provider.get_discovery_mcp_config()]
+
+        response = await self.llm.stream(messages=messages, text_format=PlanResult, tools=tools)
 
         if self.verbose:
-            print(f"\n🤖 PLANNER: {json.dumps(response.output_parsed.model_dump(), indent=2)}")
+            print(f"\n🤖 PLANNER: {json.dumps(response.output_parsed.model_dump(), indent=2)}\n")
 
         enriched_resources = self.provider.enrich_resources(response.output_parsed.resources)
-        return {"code": response.output_parsed.code, "resources": enriched_resources}
+        return {"amt_agents": response.output_parsed.amt_agents, "resources": enriched_resources}

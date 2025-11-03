@@ -3,24 +3,23 @@
 Executes agent calls and tool calls.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 from uuid import uuid4
 
 import httpx
-import openai
 
 # A2A imports
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import MessageSendParams, SendMessageRequest
 
-from . import types
+from .app import Resource
 
 
 async def call_tool(
-    tool_name: str, parameters: Dict[str, Any], registry: types.ResourceRegistry
+    tool_name: str, parameters: Dict[str, Any], resources: Dict[str, Resource]
 ) -> str:
     """Execute tool call."""
-    resource = registry.get_resource(tool_name)
+    resource = resources[tool_name]
 
     async with httpx.AsyncClient() as client:
         response = await client.post(resource.url, json=parameters)
@@ -30,10 +29,10 @@ async def call_tool(
 
 
 async def call_agent(
-    agent_name: str, parameters: Dict[str, Any], registry: types.ResourceRegistry
+    agent_name: str, parameters: Dict[str, Any], resources: Dict[str, Resource]
 ) -> str:
     """Execute agent call."""
-    resource = registry.get_resource(agent_name)
+    resource = resources[agent_name]
 
     async with httpx.AsyncClient() as httpx_client:
         resolver = A2ACardResolver(
@@ -59,23 +58,3 @@ async def call_agent(
 
         response = await client.send_message(request)
         return response.model_dump(mode="json", exclude_none=True)
-
-
-async def execute_asl_block(
-    asl_block: str, mcp_tools: List[Dict[str, Any]], memory_context: str
-) -> str:
-    """Execute ASL agent block using OpenAI + MCP (one-shot agentic execution)."""
-    client = openai.OpenAI()
-
-    response = client.responses.create(
-        model="gpt-4o",
-        tools=mcp_tools,
-        input=f"""Execute this agent:
-
-{asl_block}
-
-Previous context:
-{memory_context}""",
-    )
-
-    return response.output_text

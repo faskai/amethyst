@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import httpx
 
-from .types import Resource
+from .app import Resource
 
 
 class ResourceHydrator:
