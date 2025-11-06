@@ -1,30 +1,36 @@
-"""Amethyst code compilation.
-
-Compiles casual language to Amethyst syntax using AI.
-"""
+"""Amethyst code parsing."""
 
 import json
-from typing import Callable, List, Literal
+from typing import Callable, List
 
 from pydantic import BaseModel
 
 from .llm import LLM
-from .syntax import AMT_COMPILER_INSTRUCTIONS
+from .syntax import AMT_PARSER_INSTRUCTIONS
 
 
-class ExternalResource(BaseModel):
-    type: Literal["a2a_agent", "tool"]
-    provider: Literal["amethyst", "external"]
+class AgentDef(BaseModel):
     name: str
+    block: str
 
 
-class PlanResult(BaseModel):
-    amt_agents: List[str] = []
-    resources: List[ExternalResource] = []
+class FunctionBlock(BaseModel):
+    type: str
+    statements: List[str]
+
+
+class FunctionDef(BaseModel):
+    name: str
+    blocks: List[FunctionBlock]
+
+
+class ParseResult(BaseModel):
+    amt_agents: List[AgentDef] = []
+    functions: List[FunctionDef] = []
 
 
 class Planner:
-    """Compiles casual language to Amethyst syntax using AI."""
+    """Parses AMT syntax into execution plan."""
 
     def __init__(self, provider, send_update: Callable, verbose: bool = False):
         self.provider = provider
@@ -32,29 +38,15 @@ class Planner:
         self.send_update = send_update
         self.verbose = verbose
 
-    async def compile(self, acl: str, available_resources: list, memory: dict) -> dict:
-        """Compile casual language to Amethyst syntax using AI."""
+    async def parse(self, amt_file, app):
+        """Parse AMT code and update file in place."""
 
-        prompt = f"""
-Memory:
-{json.dumps(memory)}
-
-Instructions:
-{AMT_COMPILER_INSTRUCTIONS}
-
-Resources:
-{json.dumps(available_resources)}
-
-Casual language input:
-{acl}"""
-
+        prompt = f"{AMT_PARSER_INSTRUCTIONS}\n\nAMT Code:\n{amt_file.content}"
         messages = [{"role": "user", "content": prompt}]
-        tools = [self.provider.get_discovery_mcp_config()]
-
-        response = await self.llm.stream(messages=messages, text_format=PlanResult, tools=tools)
+        response = await self.llm.stream(messages=messages, text_format=ParseResult, tools=[])
 
         if self.verbose:
-            print(f"\n🤖 PLANNER: {json.dumps(response.output_parsed.model_dump(), indent=2)}\n")
+            print(f"\n🤖 PARSER: {json.dumps(response.output_parsed.model_dump(), indent=2)}\n")
 
-        enriched_resources = self.provider.enrich_resources(response.output_parsed.resources)
-        return {"amt_agents": response.output_parsed.amt_agents, "resources": enriched_resources}
+        amt_file.__dict__.update(response.output_parsed.model_dump())
+        self.provider.enrich_resources(app.list_resources())

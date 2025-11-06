@@ -1,9 +1,7 @@
 """Abstract provider interface."""
 
 from abc import ABC, abstractmethod
-from typing import List
-
-from amethyst_engine.planner import ExternalResource
+from typing import Any, Dict, List
 
 
 class ToolProvider(ABC):
@@ -20,14 +18,6 @@ class ToolProvider(ABC):
         pass
 
     @abstractmethod
-    def enrich_resources(self, resources: List[ExternalResource]) -> list[dict]:
-        """
-        Enrich discovered resources with connection status and auth URLs.
-
-        Args:
-            resources: List of resource dicts from MCP discovery
-
-        Returns:
-            List of enriched resource dicts with connection_status and auth_url
-        """
+    def enrich_resources(self, resources: List[Dict[str, Any]]):
+        """Enrich resources in place with connection status and auth URLs."""
         pass

@@ -1,11 +1,9 @@
 """Pipedream MCP provider."""
 
 import os
-from typing import List
+from typing import Any, Dict, List
 
 from pipedream import Pipedream
-
-from amethyst_engine.planner import ExternalResource
 
 from .provider import ToolProvider
 
@@ -51,14 +49,14 @@ class PipedreamProvider(ToolProvider):
         return [
             {
                 "type": "mcp",
-                "server_label": r["name"],
+                "server_label": r["key"],
                 "server_url": "https://remote.mcp.pipedream.net",
                 "headers": {
                     "Authorization": f"Bearer {self.access_token}",
                     "x-pd-project-id": self.project_id,
                     "x-pd-environment": self.project_environment,
                     "x-pd-external-user-id": self.user_id,
-                    "x-pd-app-slug": r["name"],
+                    "x-pd-app-slug": r["key"],
                     "x-pd-tool-mode": "sub-agent",
                 },
                 "require_approval": "never",
@@ -67,33 +65,21 @@ class PipedreamProvider(ToolProvider):
             if r["provider"] == "pipedream"
         ]
 
-    def enrich_resources(self, resources: List[ExternalResource]) -> list[dict]:
-        """Enrich discovered resources with Pipedream connection status and auth URLs."""
-        enriched = []
+    def enrich_resources(self, resources: List[Dict[str, Any]]):
+        """Enrich resources in place with Pipedream connection status and auth URLs."""
         connect_link_base = None
-
         for resource in resources:
-            if resource.provider == "external":
-                enriched_resource = resource.dict()
-                enriched_resource["provider"] = "pipedream"
-                enriched_resource["type"] = "tool"
-
+            if resource["provider"] == "pipedream":
                 accounts = list(
-                    self.pd.accounts.list(external_user_id=self.user_id, app=resource.name)
+                    self.pd.accounts.list(external_user_id=self.user_id, app=resource["key"])
                 )
-
                 if accounts:
-                    enriched_resource["connection_status"] = "connected"
-                    enriched_resource["auth_url"] = None
+                    resource["connection_status"] = "connected"
+                    resource["auth_url"] = None
                 else:
                     if not connect_link_base:
                         connect_link_base = self.pd.tokens.create(
                             external_user_id=self.user_id
                         ).connect_link_url
-
-                    enriched_resource["connection_status"] = "needs_oauth"
-                    enriched_resource["auth_url"] = f"{connect_link_base}&app={resource.name}"
-
-                enriched.append(enriched_resource)
-
-        return enriched
+                    resource["connection_status"] = "needs_oauth"
+                    resource["auth_url"] = f"{connect_link_base}&app={resource['key']}"

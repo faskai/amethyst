@@ -31,6 +31,8 @@ class LLM:
             if self.send_update:
                 async for event in stream:
                     content = f": {event.delta}" if hasattr(event, "delta") else ""
-                    self.send_update({"type": "progress", "message": f"{event.type}{content}"})
+                    self.send_update(
+                        {"type": "progress_details", "message": f"{event.type}{content}"}
+                    )
 
             return await stream.get_final_response()

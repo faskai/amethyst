@@ -25,7 +25,7 @@ class ResourceHydrator:
         if resource.type == "tool":
             resource.parameters = await self._fetch_tool_schema(resource.name)
         elif resource.type == "agent":
-            resource.capabilities = await self._fetch_agent_capabilities(resource.name)
+            resource.skills = await self._fetch_agent_capabilities(resource.name)
 
     async def _fetch_tool_schema(self, tool_name: str) -> Dict:
         """Fetch tool schema from unified server."""

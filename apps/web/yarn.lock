@@ -646,6 +646,11 @@
   resolved "https://registry.npmjs.org/@nolyfill/is-core-module/-/is-core-module-1.0.39.tgz#3dc35ba0f1e66b403c00b39344f870298ebb1c8e"
   integrity sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==
 
+"@pipedream/sdk@^2.2.0":
+  version "2.2.0"
+  resolved "https://registry.npmjs.org/@pipedream/sdk/-/sdk-2.2.0.tgz#4beb7811cfb6070d042d13c79cf78bec1f176c5b"
+  integrity sha512-zDg9VtzVtwMoMPXKHZjRjjSmKh1e3fy2WK7kMoyqhQ36lgPWkJCJLLuLVt5iIFy2EfCkUB3UkIZcDcmHsEbD7Q==
+
 "@popperjs/core@^2.11.8":
   version "2.11.8"
   resolved "https://registry.npmjs.org/@popperjs/core/-/core-2.11.8.tgz#6b79032e760a0899cd4204710beede972a3a185f"

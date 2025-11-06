@@ -6,16 +6,17 @@ from typing import Dict, List, Literal
 
 @dataclass
 class Resource:
-    """Agent or tool resource definition."""
+    """Agent, tool, or function resource definition."""
 
-    type: Literal["agent", "tool"]
+    type: Literal["agent", "tool", "function"]
     name: str
-    provider: Literal["amethyst", "external"]
+    provider: Literal["amethyst", "pipedream"]
+    key: str = None
     url: str = None
     connection_status: str = None
     auth_url: str = None
     parameters: Dict = None
-    capabilities: List[Dict] = None
+    skills: List[Dict] = None
 
 
 @dataclass
@@ -23,6 +24,8 @@ class AmtFile:
     """AMT file containing Amethyst code."""
 
     content: str
+    amt_agents: List = field(default_factory=list)
+    functions: List = field(default_factory=list)
 
 
 @dataclass

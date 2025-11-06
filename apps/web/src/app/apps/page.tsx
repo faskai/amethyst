@@ -3,7 +3,8 @@
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import Alert from '@mui/material/Alert';
+import Autocomplete from '@mui/material/Autocomplete';
+import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -21,18 +22,59 @@ interface AmtFile {
   content: string;
 }
 
+interface Resource {
+  name: string;
+  provider: string;
+  type: string;
+  key?: string;
+}
+
 interface App {
   files: AmtFile[];
+  resources: Resource[];
+}
+
+interface PipedreamApp {
+  name_slug: string;
+  name: string;
+  img_src?: string;
 }
 
 export default function AppsPage() {
   const [app, setApp] = React.useState<App>({
     files: [{ content: '' }],
+    resources: [],
   });
+  const [pipedreamApps, setPipedreamApps] = React.useState<PipedreamApp[]>([]);
+  const [resourceImages, setResourceImages] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<any>(null);
   const [progress, setProgress] = React.useState<string>('');
+  const [progressDetails, setProgressDetails] = React.useState<string>('');
   const [oauthRequired, setOauthRequired] = React.useState<any>(null);
+
+  const searchPipedreamApps = async (query: string) => {
+    if (!query || query.length < 2) return;
+    const res = await fetch(`/api/pipedream/apps?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    setPipedreamApps(data.data || []);
+  };
+
+  const addResource = (app_data: PipedreamApp) => {
+    if (app.resources.some(r => r.key === app_data.name_slug)) return;
+    setApp({ ...app, resources: [...app.resources, { name: app_data.name, key: app_data.name_slug, provider: 'pipedream', type: 'tool' }] });
+    if (app_data.img_src) {
+      setResourceImages(prev => ({ ...prev, [app_data.name_slug]: app_data.img_src! }));
+    }
+  };
+
+  const removeResource = (key: string) => {
+    setApp({ ...app, resources: app.resources.filter(r => r.key !== key) });
+    setResourceImages(prev => {
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  };
 
   const addFile = () => {
     setApp({
@@ -58,15 +100,13 @@ export default function AppsPage() {
     setLoading(true);
     setResult(null);
     setProgress('');
+    setProgressDetails('');
     setOauthRequired(null);
 
     const response = await fetch('http://localhost:8000/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        files: app.files,
-        resources: [],
-      }),
+      body: JSON.stringify(app),
     });
 
     const reader = response.body!.getReader();
@@ -87,6 +127,8 @@ export default function AppsPage() {
           
           if (data.type === 'progress') {
             setProgress(data.message);
+          } else if (data.type === 'progress_details') {
+            setProgressDetails(data.message);
           } else if (data.type === 'oauth_required') {
             setOauthRequired(data);
             setLoading(false);
@@ -97,7 +139,7 @@ export default function AppsPage() {
         }
       }
     }
-  }, [loading, app.files]);
+  }, [app]);
 
   const isValid = app.files.every((f) => f.content);
 
@@ -113,6 +155,46 @@ export default function AppsPage() {
       </Box>
 
       <Stack spacing={4}>
+        <Box>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Resources</Typography>
+          <Autocomplete
+            options={pipedreamApps}
+            getOptionLabel={(option) => option.name}
+            value={null}
+            onInputChange={(_, value) => searchPipedreamApps(value)}
+            onChange={(_, value) => value && addResource(value)}
+            renderOption={(props, option) => {
+              const { key, ...otherProps } = props;
+              return (
+                <Box component="li" key={key} {...otherProps} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {option.img_src && (
+                    <Box component="img" src={option.img_src} alt={option.name} sx={{ width: 24, height: 24 }} />
+                  )}
+                  <Typography>{option.name}</Typography>
+                </Box>
+              );
+            }}
+            renderInput={(params) => <TextField {...params} label="Search Apps" placeholder="Type to search..." />}
+            sx={{ mb: 2 }}
+          />
+          {app.resources.length > 0 && (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {app.resources.map((resource, idx) => (
+                <Chip 
+                  key={`${resource.key}-${idx}`} 
+                  avatar={resource.key && resourceImages[resource.key] ? <Avatar src={resourceImages[resource.key]} alt={resource.name} /> : undefined}
+                  label={resource.name} 
+                  onDelete={() => removeResource(resource.key!)} 
+                  color="primary" 
+                  variant="outlined" 
+                />
+              ))}
+            </Stack>
+          )}
+        </Box>
+
+        <Divider />
+
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6" fontWeight={600}>
@@ -142,12 +224,13 @@ export default function AppsPage() {
                 <TextField
                   fullWidth
                   multiline
-                  rows={6}
-                  placeholder="Write your Amethyst logic here..."
+                  rows={8}
+                  placeholder="Write your Amethyst code here..."
                   value={file.content}
                   onChange={(e) => updateFile(index, e.target.value)}
                   variant="outlined"
-                  helperText="Each file runs sequentially and shares memory"
+                  helperText="Write agents and functions in Amethyst syntax"
+                  sx={{ fontFamily: 'monospace' }}
                 />
               </Paper>
             ))}
@@ -191,6 +274,20 @@ export default function AppsPage() {
             >
               {progress}
             </Typography>
+            {progressDetails && (
+              <Typography
+                variant="caption"
+                sx={{
+                  fontFamily: 'monospace',
+                  color: 'text.disabled',
+                  fontSize: '0.75rem',
+                  mt: 1,
+                  display: 'block',
+                }}
+              >
+                {progressDetails}
+              </Typography>
+            )}
           </Paper>
         )}
 
@@ -240,15 +337,9 @@ export default function AppsPage() {
                 {JSON.stringify(result.memory, null, 2)}
               </Paper>
             )}
-            {result.status === 'oauth_required' && (
-              <Alert severity="info">
-                Authorization required
-              </Alert>
-            )}
           </Paper>
         )}
       </Stack>
     </Container>
   );
 }
-
