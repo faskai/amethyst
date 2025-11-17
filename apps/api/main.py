@@ -23,6 +23,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
 @app.post("/run")
 async def run_app(request: Request):
     body = await request.json()
