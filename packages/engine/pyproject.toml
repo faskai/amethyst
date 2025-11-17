@@ -3,7 +3,6 @@ name = "amethyst-engine"
 version = "0.1.0"
 description = "Amethyst execution engine"
 authors = ["Arko Bhattacharya <arko@fask.ai>"]
-readme = "README.md"
 packages = [{include = "amethyst_engine", from = "src"}]
 
 [tool.poetry.dependencies]
