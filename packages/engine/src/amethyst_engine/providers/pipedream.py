@@ -1,11 +1,11 @@
 """Pipedream MCP provider."""
 
 import os
-from typing import Any, Dict, List
+from typing import List
 
 from pipedream import Pipedream
 
-from ..app import Resource
+from ..app import Resource, ResourceExpanded
 from .provider import ToolProvider
 
 
@@ -66,11 +66,11 @@ class PipedreamProvider(ToolProvider):
             if r.provider == "pipedream"
         ]
 
-    def enrich_resources(self, resources: List[Resource]):
-        """Enrich resources in place with Pipedream connection status and auth URLs."""
+    def enrich_resources(self, resources: List[ResourceExpanded]):
+        """Enrich ResourceExpanded objects in place with Pipedream connection status and auth URLs."""
         connect_link_base = None
         for resource in resources:
-            if resource.provider == "pipedream":
+            if resource.provider == "pipedream" and resource.key:
                 accounts = list(
                     self.pd.accounts.list(external_user_id=self.user_id, app=resource.key)
                 )

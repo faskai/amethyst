@@ -1,22 +1,42 @@
 """Amethyst app and resource types."""
 
-from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Literal
+from dataclasses import dataclass, field
+from typing import Dict, List, Literal, Optional
+
+from pydantic import BaseModel
 
 
-@dataclass
-class Resource:
-    """Agent, tool, or function resource definition."""
+class Statement(BaseModel):
+    """Single statement in a function block."""
 
-    type: Literal["agent", "tool", "function"]
+    text: str
+    is_parallel: bool = False
+
+
+class AmtBlock(BaseModel):
+    """Function execution block."""
+
+    type: Literal["sequence", "repeat", "wait"]
+    statements: List[Statement] = []
+
+
+class Resource(BaseModel):
+    """Lightweight resource for interpreter (sent to LLM)."""
+
+    type: str
     name: str
-    provider: Literal["amethyst", "pipedream"]
-    key: str = None
-    url: str = None
-    connection_status: str = None
-    auth_url: str = None
-    parameters: Dict = None
-    skills: List[Dict] = None
+    provider: str
+    key: Optional[str] = None
+
+
+class ResourceExpanded(Resource):
+    """Extended resource with execution details (internal processing)."""
+
+    is_main: bool = False
+    code: Optional[str] = None
+    blocks: List[AmtBlock] = []
+    connection_status: Optional[str] = None
+    auth_url: Optional[str] = None
 
 
 @dataclass
@@ -24,8 +44,6 @@ class AmtFile:
     """AMT file containing Amethyst code."""
 
     content: str
-    amt_agents: List = field(default_factory=list)
-    functions: List = field(default_factory=list)
 
 
 @dataclass
@@ -34,8 +52,9 @@ class App:
 
     files: List[AmtFile]
     resources: Dict[str, Resource] = field(default_factory=dict)
+    resources_expanded: List[ResourceExpanded] = field(default_factory=list)
     workspaceId: str = ""
 
     def list_resources_as_dict(self) -> List[Dict]:
         """Serialize resources to dicts for JSON output."""
-        return [asdict(r) for r in self.resources.values()]
+        return [r.model_dump() for r in self.resources.values()]

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from ..app import Resource
+from ..app import Resource, ResourceExpanded
 
 
 class ToolProvider(ABC):
@@ -20,6 +20,6 @@ class ToolProvider(ABC):
         pass
 
     @abstractmethod
-    def enrich_resources(self, resources: List[Resource]):
-        """Enrich resources in place with connection status and auth URLs."""
+    def enrich_resources(self, resources: List[ResourceExpanded]):
+        """Enrich ResourceExpanded objects in place with connection status and auth URLs."""
         pass

@@ -43,7 +43,7 @@ async def run_app(request: Request):
         app_obj = App(
             files=[AmtFile(**f) for f in body["files"]],
             resources={r["key"]: Resource(**r) for r in body.get("resources", [])},
-            workspaceId=body.get("workspaceId", ""),
+            workspaceId=body["workspaceId"],
         )
 
         engine = Engine(send_update=messages.put_nowait, verbose=True)
@@ -55,7 +55,6 @@ async def run_app(request: Request):
                 yield f"data: {json.dumps(update)}\n\n"
             await asyncio.sleep(0)
 
-        result = await task
-        yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
+        await task
 
     return StreamingResponse(stream(), media_type="text/event-stream")

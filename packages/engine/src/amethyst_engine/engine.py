@@ -4,22 +4,60 @@ The Engine orchestrates parsing and execution of Amethyst code:
 - Planner: Parses Amethyst syntax into execution plan
 - Interpreter: Interprets code and executes MCP tools
 - Memory: Tracks runtime state and results
+
+Sample code:
+```
+function modify-docs
+repeat for each in input
+use google_docs to summarize the doc in 1 paragraph in a funny tone
+end repeat
+end function
+
+function modify-docs-parallel
+repeat for each in input
+parallel use google_docs to summarize the doc in 1 paragraph in a funny tone
+end repeat
+wait
+end function
+
+agent write-doc
+use google_docs to summarize content and write it into a new file called "Summary"
+end agent
+
+main agent bulk-summz
+use google_docs to list the following 2 files: “GTA4” and “RDR2”
+use modify-docs-parallel to get updated docs
+Summarize the above in one paragraph
+use write-doc to write to file
+end agent
+```
 """
 
+import asyncio
+import json
 import logging
-from dataclasses import asdict
-from typing import Callable
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from .app import App, Resource
+from .app import App
 from .hydrator import ResourceHydrator
 from .interpreter import Interpreter
-from .memory import Memory, TaskType
+from .memory import Memory, TaskExpanded, TaskType
 from .planner import Planner
 from .providers.pipedream import PipedreamProvider
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EngineContext:
+    """Execution context passed through engine methods."""
+
+    app: App
+    interpreter: Interpreter
+    mcp_tools: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class Engine:
@@ -49,8 +87,6 @@ class Engine:
         self.provider = PipedreamProvider(workspace_id=app.workspaceId, verbose=self.verbose)
         self.planner = Planner(self.provider, send_update=self.send_update, verbose=self.verbose)
 
-        await self.hydrator.hydrate_resources(list(app.resources.values()))
-
         for idx, amt_file in enumerate(app.files, 1):
             self.send_update(
                 {"type": "progress", "message": f"Parsing file {idx}/{len(app.files)}"}
@@ -59,79 +95,137 @@ class Engine:
             await self.planner.parse(amt_file, app)
 
             needs_oauth = [
-                r for r in app.resources.values() if r.connection_status == "needs_oauth"
+                r for r in app.resources_expanded if r.connection_status == "needs_oauth"
             ]
             if needs_oauth:
-                needs_oauth_dict = [asdict(r) for r in needs_oauth]
+                needs_oauth_dict = [r.model_dump() for r in needs_oauth]
                 self.send_update({"type": "oauth_required", "resources": needs_oauth_dict})
                 return {"status": "oauth_required", "resources": needs_oauth_dict}
 
-            await self.execute(amt_file, app)
+            main_resource = next(r for r in app.resources_expanded if r.is_main)
+            self.send_update(
+                {"type": "progress", "message": f"Executing main: {main_resource.name}"}
+            )
+
+            context = EngineContext(
+                app=app,
+                interpreter=Interpreter(send_update=self.send_update, verbose=self.verbose),
+                mcp_tools=self.provider.get_execution_mcp_config(list(app.resources.values())),
+            )
+
+            is_agent = main_resource.type == "amt_agent"
+            main_task = await self._create_task(
+                None, main_resource.name, TaskType.AMT_AGENT if is_agent else TaskType.AMT_FUNCTION
+            )
+            await self._execute_task(main_task, context)
+
             self.send_update({"type": "progress", "message": f"Completed file {idx}"})
 
         self.send_update({"type": "progress", "message": "App execution completed"})
-        return {"status": "completed", "memory": self.memory.get_context()}
 
-    async def execute(self, amt_file, app: App):
-        """Execute parsed file."""
-        # Register functions as resources
-        for func in amt_file.functions:
-            app.resources[func["name"]] = Resource(
-                type="function", name=func["name"], provider="amethyst"
-            )
-
-        mcp_tools = self.provider.get_execution_mcp_config(list(app.resources.values()))
-        interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
-
-        # Execute agents
-        for agent_def in amt_file.amt_agents:
-            await self._execute_agent(agent_def, app, interpreter, mcp_tools, amt_file)
-
-    async def _execute_agent(self, agent_def: dict, app, interpreter, mcp_tools, amt_file):
-        """Primitive #1: Execute agent block iteratively until completion."""
-        self.send_update({"type": "progress", "message": f"Executing agent {agent_def['name']}"})
-        agent_block = agent_def["block"]
-
-        while True:
-            task = await interpreter.interpret(
-                agent_block, self.memory.get_context(), app.list_resources_as_dict(), mcp_tools
-            )
-            self.memory.tasks[task.id] = task
-
-            if task.task_type == TaskType.AMT_FUNCTION_CALL:
-                task.result = await self._execute_function(
-                    task.resource_name,
-                    task.input.get("input", []),
-                    app,
-                    interpreter,
-                    mcp_tools,
-                    amt_file,
-                )
-
-            if task.task_type == TaskType.AMT_AGENT_CALL:
-                self.send_update({"type": "result", "task": task.id, "result": task.result})
-                return task
-
-    async def _execute_function(
-        self, func_name: str, input_data: list, app, interpreter, mcp_tools, amt_file
+    async def _create_task(
+        self,
+        parent_task_id: str,
+        resource_name: str,
+        task_type: TaskType,
+        input: Optional[dict] = None,
     ):
-        """Primitive #2: Execute function blocks (sequence, repeat, parallel)."""
-        func_def = next(f for f in amt_file.functions if f["name"] == func_name)
+        task = TaskExpanded(
+            parent_task_id=parent_task_id,
+            resource_name=resource_name,
+            task_type=task_type,
+            input=input or {},
+        )
+        self.memory.tasks[task.id] = task
+        self.send_update({"type": "task_created", "task": task.to_dict()})
+        return task
+
+    async def _execute_task(self, task: TaskExpanded, context: EngineContext):
+        if task.task_type == TaskType.AMT_AGENT:
+            await self._execute_agent(task, context)
+        elif task.task_type == TaskType.AMT_FUNCTION:
+            await self._execute_function(task, context)
+        else:
+            raise ValueError(f"Invalid task type: {task.task_type}")
+
+    async def _interpret_and_execute(
+        self,
+        code: str,
+        parent_task: TaskExpanded,
+        context: EngineContext,
+    ):
+        mem_context = self.memory.get_scoped_context(parent_task.id)
+        output, ai_call = await context.interpreter.interpret(
+            code,
+            mem_context,
+            context.app.list_resources_as_dict(),
+            context.mcp_tools,
+            parent_task.id,
+            parent_task.input,
+        )
+
+        # Update parent with ai_call
+        parent_task.ai_calls.append(ai_call)
+        self.send_update(
+            {"type": "task_updated", "task": parent_task.to_dict(include_ai_calls=True)}
+        )
+
+        if output.result:
+            # Completion - update parent result
+            parent_task.result = output.result.result
+            self.send_update(
+                {"type": "task_updated", "task": parent_task.to_dict(include_ai_calls=True)}
+            )
+            return None
+
+        # Task call - create and execute child task
+        child_task = await self._create_task(
+            parent_task.id,
+            output.task.resource_name,
+            TaskType(output.task.task_type),
+            {"input": json.loads(output.task.input)} if output.task.input else {},
+        )
+        await self._execute_task(child_task, context)
+
+        return child_task
+
+    async def _execute_agent(self, agent_task: TaskExpanded, context: EngineContext):
+        # Find agent definition
+        agent_def = next(
+            r for r in context.app.resources_expanded if r.name == agent_task.resource_name
+        )
+
+        # Loop until agent completes
+        while True:
+            child_task = await self._interpret_and_execute(
+                agent_def.code,
+                agent_task,
+                context,
+            )
+            if child_task is None:  # Agent completed
+                return agent_task
+
+    async def _execute_function(self, func_task: TaskExpanded, context: EngineContext):
+        """Execute function blocks (sequence, repeat, wait)."""
+        func_def = next(
+            r for r in context.app.resources_expanded if r.name == func_task.resource_name
+        )
+        input_data = func_task.input.get("input", [])
         results = []
 
-        for block in func_def["blocks"]:
-            if block["type"] == "sequence":
-                block_results = await self._execute_statements(
-                    block["statements"],
-                    self.memory.get_context(),
-                    app,
-                    interpreter,
-                    mcp_tools,
-                    amt_file,
-                )
-                results.extend(block_results)
+        for block in func_def.blocks:
+            if block.type == "sequence":
+                for stmt in block.statements:
+                    stmt_task = await self._execute_statement(
+                        stmt.text,
+                        func_task,
+                        context=context,
+                        is_parallel=stmt.is_parallel,
+                    )
+                    if not stmt.is_parallel:
+                        results.append(stmt_task.result)
 
-            elif block["type"] == "repeat":
+            elif block.type == "repeat":
                 for idx, item in enumerate(input_data):
                     self.send_update(
                         {
@@ -139,51 +233,60 @@ class Engine:
                             "message": f"Processing item {idx + 1}/{len(input_data)}",
                         }
                     )
-                    context = self.memory.get_context()
-                    context["current_item"] = item
+                    for stmt in block.statements:
+                        stmt_task = await self._execute_statement(
+                            stmt.text,
+                            func_task,
+                            context=context,
+                            input=item,
+                            is_parallel=stmt.is_parallel,
+                        )
+                        if not stmt.is_parallel:
+                            results.append(stmt_task.result)
 
-                    block_results = await self._execute_statements(
-                        block["statements"], context, app, interpreter, mcp_tools, amt_file
-                    )
-                    results.extend(block_results)
+            elif block.type == "wait":
+                # Wait for all async tasks with same parent_task_id
+                async_tasks = [
+                    t.async_task
+                    for t in self.memory.tasks.values()
+                    if t.parent_task_id == func_task.id and t.async_task
+                ]
+                if async_tasks:
+                    await asyncio.gather(*async_tasks)
+                    # Collect results from async tasks
+                    for t in self.memory.tasks.values():
+                        if t.parent_task_id == func_task.id and t.async_task and t.result:
+                            results.append(t.result)
 
-        return results
-
-    async def _execute_statements(
-        self, statements: list, context: dict, app, interpreter, mcp_tools, amt_file
-    ) -> list:
-        """Primitive #4: Execute a list of statements."""
-        results = []
-        for statement in statements:
-            task = await self._execute_statement(
-                statement, context, app, interpreter, mcp_tools, amt_file
-            )
-            results.append(task.result)
-        return results
+        func_task.result = results
+        self.send_update({"type": "task_updated", "task": func_task.to_dict(include_ai_calls=True)})
 
     async def _execute_statement(
-        self, statement: str, context: dict, app, interpreter, mcp_tools, amt_file
+        self,
+        statement: str,
+        parent_task: TaskExpanded,
+        context: EngineContext,
+        input: Optional[dict] = None,
+        is_parallel: bool = False,
     ):
-        """Primitive #3: Execute a single statement."""
-        self.send_update({"type": "progress", "message": f"Executing statement {statement}"})
-        task = await interpreter.interpret(
-            statement, context, app.list_resources_as_dict(), mcp_tools
+        """Execute statement - creates statement task and executes (sync or async)."""
+        prefix = "parallel " if is_parallel else ""
+        self.send_update(
+            {"type": "progress", "message": f"Executing {prefix}statement {statement}"}
         )
-        self.memory.tasks[task.id] = task
 
-        if task.task_type == TaskType.AMT_FUNCTION_CALL:
-            task.result = await self._execute_function(
-                task.resource_name,
-                task.input.get("input", []),
-                app,
-                interpreter,
-                mcp_tools,
-                amt_file,
-            )
-        return task
+        # Create statement task
+        stmt_task = await self._create_task(
+            parent_task.id, "", TaskType.STATEMENT, {"input": input} if input else {}
+        )
 
-    async def _await_tasks(self, task_ids):
-        """Wait for async tasks."""
-        for task_id in task_ids:
-            task = self.memory.tasks[task_id]
-            task.result = await task.async_task
+        # Execute statement
+        async def execute():
+            await self._interpret_and_execute(statement, stmt_task, context)
+
+        if is_parallel:
+            stmt_task.async_task = asyncio.create_task(execute())
+        else:
+            await execute()
+
+        return stmt_task
