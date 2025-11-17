@@ -49,4 +49,4 @@ class Planner:
             print(f"\n🤖 PARSER: {json.dumps(response.output_parsed.model_dump(), indent=2)}\n")
 
         amt_file.__dict__.update(response.output_parsed.model_dump())
-        self.provider.enrich_resources(app.list_resources())
+        self.provider.enrich_resources(list(app.resources.values()))

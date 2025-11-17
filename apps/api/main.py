@@ -42,7 +42,8 @@ async def run_app(request: Request):
 
         app_obj = App(
             files=[AmtFile(**f) for f in body["files"]],
-            resources={r["name"]: Resource(**r) for r in body.get("resources", [])},
+            resources={r["key"]: Resource(**r) for r in body.get("resources", [])},
+            workspaceId=body.get("workspaceId", ""),
         )
 
         engine = Engine(send_update=messages.put_nowait, verbose=True)

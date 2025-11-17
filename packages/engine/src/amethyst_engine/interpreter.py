@@ -34,7 +34,7 @@ class Interpreter:
         self,
         code: str,
         memory: dict,
-        resources: List[Dict[str, str]],
+        resources: List[Dict],
         mcp_tools: List[Dict[str, Any]],
     ) -> Task:
         """Interpret code and return task."""

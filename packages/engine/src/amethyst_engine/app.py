@@ -34,6 +34,8 @@ class App:
 
     files: List[AmtFile]
     resources: Dict[str, Resource] = field(default_factory=dict)
+    workspaceId: str = ""
 
-    def list_resources(self) -> List[Dict]:
+    def list_resources_as_dict(self) -> List[Dict]:
+        """Serialize resources to dicts for JSON output."""
         return [asdict(r) for r in self.resources.values()]

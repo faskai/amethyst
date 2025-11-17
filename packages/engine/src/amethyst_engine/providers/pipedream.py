@@ -5,14 +5,15 @@ from typing import Any, Dict, List
 
 from pipedream import Pipedream
 
+from ..app import Resource
 from .provider import ToolProvider
 
 
 class PipedreamProvider(ToolProvider):
     """Pipedream provider implementation."""
 
-    def __init__(self, verbose: bool = False):
-        self.user_id = os.getenv("PIPEDREAM_EXTERNAL_USER_ID", "default_user")
+    def __init__(self, workspace_id: str, verbose: bool = False):
+        self.user_id = workspace_id
         self.project_id = os.getenv("PIPEDREAM_PROJECT_ID")
         self.project_environment = os.getenv("PIPEDREAM_PROJECT_ENVIRONMENT")
         self.client_id = os.getenv("PIPEDREAM_CLIENT_ID")
@@ -44,42 +45,42 @@ class PipedreamProvider(ToolProvider):
             "require_approval": "never",
         }
 
-    def get_execution_mcp_config(self, available_resources: list) -> list[dict]:
+    def get_execution_mcp_config(self, available_resources: List[Resource]) -> list[dict]:
         """Get MCP configs for specific apps."""
         return [
             {
                 "type": "mcp",
-                "server_label": r["key"],
+                "server_label": r.key,
                 "server_url": "https://remote.mcp.pipedream.net",
                 "headers": {
                     "Authorization": f"Bearer {self.access_token}",
                     "x-pd-project-id": self.project_id,
                     "x-pd-environment": self.project_environment,
                     "x-pd-external-user-id": self.user_id,
-                    "x-pd-app-slug": r["key"],
+                    "x-pd-app-slug": r.key,
                     "x-pd-tool-mode": "sub-agent",
                 },
                 "require_approval": "never",
             }
             for r in available_resources
-            if r["provider"] == "pipedream"
+            if r.provider == "pipedream"
         ]
 
-    def enrich_resources(self, resources: List[Dict[str, Any]]):
+    def enrich_resources(self, resources: List[Resource]):
         """Enrich resources in place with Pipedream connection status and auth URLs."""
         connect_link_base = None
         for resource in resources:
-            if resource["provider"] == "pipedream":
+            if resource.provider == "pipedream":
                 accounts = list(
-                    self.pd.accounts.list(external_user_id=self.user_id, app=resource["key"])
+                    self.pd.accounts.list(external_user_id=self.user_id, app=resource.key)
                 )
                 if accounts:
-                    resource["connection_status"] = "connected"
-                    resource["auth_url"] = None
+                    resource.connection_status = "connected"
+                    resource.auth_url = None
                 else:
                     if not connect_link_base:
                         connect_link_base = self.pd.tokens.create(
                             external_user_id=self.user_id
                         ).connect_link_url
-                    resource["connection_status"] = "needs_oauth"
-                    resource["auth_url"] = f"{connect_link_base}&app={resource['key']}"
+                    resource.connection_status = "needs_oauth"
+                    resource.auth_url = f"{connect_link_base}&app={resource.key}"

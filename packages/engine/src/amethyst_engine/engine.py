@@ -7,6 +7,7 @@ The Engine orchestrates parsing and execution of Amethyst code:
 """
 
 import logging
+from dataclasses import asdict
 from typing import Callable
 
 from dotenv import load_dotenv
@@ -15,6 +16,8 @@ from .app import App, Resource
 from .hydrator import ResourceHydrator
 from .interpreter import Interpreter
 from .memory import Memory, TaskType
+from .planner import Planner
+from .providers.pipedream import PipedreamProvider
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +35,8 @@ class Engine:
         self.memory = Memory()
         self.verbose = verbose
         self.send_update = send_update
-
-        from .providers.pipedream import PipedreamProvider
-
-        self.provider = PipedreamProvider(verbose=verbose)
-
-        from .planner import Planner
-
-        self.planner = Planner(self.provider, send_update=send_update, verbose=verbose)
-
+        self.provider = None
+        self.planner = None
         self.hydrator = ResourceHydrator()
 
         if verbose:
@@ -48,6 +44,10 @@ class Engine:
 
     async def run(self, app: App) -> dict:
         """Run Amethyst app with multiple files."""
+
+        # Initialize provider and planner with workspace_id from app
+        self.provider = PipedreamProvider(workspace_id=app.workspaceId, verbose=self.verbose)
+        self.planner = Planner(self.provider, send_update=self.send_update, verbose=self.verbose)
 
         await self.hydrator.hydrate_resources(list(app.resources.values()))
 
@@ -59,11 +59,12 @@ class Engine:
             await self.planner.parse(amt_file, app)
 
             needs_oauth = [
-                r for r in app.list_resources() if r.get("connection_status") == "needs_oauth"
+                r for r in app.resources.values() if r.connection_status == "needs_oauth"
             ]
             if needs_oauth:
-                self.send_update({"type": "oauth_required", "resources": needs_oauth})
-                return {"status": "oauth_required", "resources": needs_oauth}
+                needs_oauth_dict = [asdict(r) for r in needs_oauth]
+                self.send_update({"type": "oauth_required", "resources": needs_oauth_dict})
+                return {"status": "oauth_required", "resources": needs_oauth_dict}
 
             await self.execute(amt_file, app)
             self.send_update({"type": "progress", "message": f"Completed file {idx}"})
@@ -79,7 +80,7 @@ class Engine:
                 type="function", name=func["name"], provider="amethyst"
             )
 
-        mcp_tools = self.provider.get_execution_mcp_config(app.list_resources())
+        mcp_tools = self.provider.get_execution_mcp_config(list(app.resources.values()))
         interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
 
         # Execute agents
@@ -93,7 +94,7 @@ class Engine:
 
         while True:
             task = await interpreter.interpret(
-                agent_block, self.memory.get_context(), app.list_resources(), mcp_tools
+                agent_block, self.memory.get_context(), app.list_resources_as_dict(), mcp_tools
             )
             self.memory.tasks[task.id] = task
 
@@ -165,7 +166,9 @@ class Engine:
     ):
         """Primitive #3: Execute a single statement."""
         self.send_update({"type": "progress", "message": f"Executing statement {statement}"})
-        task = await interpreter.interpret(statement, context, app.list_resources(), mcp_tools)
+        task = await interpreter.interpret(
+            statement, context, app.list_resources_as_dict(), mcp_tools
+        )
         self.memory.tasks[task.id] = task
 
         if task.task_type == TaskType.AMT_FUNCTION_CALL:

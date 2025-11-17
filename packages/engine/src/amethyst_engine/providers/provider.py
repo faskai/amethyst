@@ -1,7 +1,9 @@
 """Abstract provider interface."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import List
+
+from ..app import Resource
 
 
 class ToolProvider(ABC):
@@ -13,11 +15,11 @@ class ToolProvider(ABC):
         pass
 
     @abstractmethod
-    def get_execution_mcp_config(self, available_resources: list) -> list[dict]:
+    def get_execution_mcp_config(self, available_resources: List[Resource]) -> list[dict]:
         """Get MCP configs for execution phase."""
         pass
 
     @abstractmethod
-    def enrich_resources(self, resources: List[Dict[str, Any]]):
+    def enrich_resources(self, resources: List[Resource]):
         """Enrich resources in place with connection status and auth URLs."""
         pass
