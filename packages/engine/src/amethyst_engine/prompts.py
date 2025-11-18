@@ -79,11 +79,12 @@ Given code (agent block or single statement) and previous task results, execute 
 
 Rules:
 - For an agent block you need to call resources to perform tasks.
+- Iterate with MCP tools internally to perform the tasks.
+- Retry MCP tools if they fail, try different tools and parameters to get the desired result
 - If resource is an AMT function: return task={resource_name, task_type="amt_function", input as JSON array string}
 - If resource is an AMT agent: return task={resource_name, task_type="amt_agent", input as JSON array string}
 - If MCP tool executed or agent/statement completed: return result={result text}
 - Resolve variables from task results (e.g., "item" from input in context)
-- Retry MCP tools if they fail, try different tools and parameters to get the desired result
 
 Output format (one of):
 - For function call: {"task": {"resource_name": "function_name", "task_type": "amt_function", "input": "[{...}, {...}]"}}

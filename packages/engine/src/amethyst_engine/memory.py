@@ -1,34 +1,33 @@
 """Runtime execution state."""
 
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class AiCall:
+
+class AiCall(BaseModel):
     """AI input / output for tracing and debugging."""
 
-    input_messages: List[Dict[str, str]] = field(default_factory=list)
-    intermediate_outputs: List[Dict[str, Any]] = field(default_factory=list)
+    input_messages: List[Dict[str, str]] = []
+    intermediate_outputs: List[Dict[str, Any]] = []
 
 
-class TaskType(Enum):
+class TaskType(str, Enum):
     AMT_AGENT = "amt_agent"
     AMT_FUNCTION = "amt_function"
     STATEMENT = "statement"
 
 
-@dataclass
-class Task:
+class Task(BaseModel):
     """Basic task for LLM (lightweight, serializable)."""
 
-    id: str = field(default_factory=lambda: str(f"task-{uuid4()}"))
-    parent_task_id: str | None = None
+    id: str = Field(default_factory=lambda: f"task-{uuid4()}")
+    parent_task_id: Optional[str] = None
     resource_name: str = ""
     task_type: TaskType = TaskType.AMT_AGENT
-    input: Dict[str, Any] = field(default_factory=dict)
+    input: Dict[str, Any] = Field(default_factory=dict)
     result: Any = None
 
     def to_dict(self) -> dict:
@@ -43,40 +42,36 @@ class Task:
         }
 
 
-@dataclass
 class TaskExpanded(Task):
     """Expanded task for internal processing with tracing."""
 
-    async_task: Any = field(default=None, init=False, repr=False)
-    ai_calls: List[AiCall] = field(default_factory=list, repr=False)
+    ai_calls: List[AiCall] = []
+    async_task: Any = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def to_dict(self, include_ai_calls: bool = False) -> dict:
         """Serialize task to dict, optionally including ai_calls for tracing."""
         data = super().to_dict()
         if include_ai_calls and self.ai_calls:
-            data["ai_calls"] = [
-                {
-                    "input_messages": ac.input_messages,
-                    "intermediate_outputs": ac.intermediate_outputs,
-                }
-                for ac in self.ai_calls
-            ]
+            data["ai_calls"] = [ac.model_dump() for ac in self.ai_calls]
         return data
 
 
-class Memory:
+class Memory(BaseModel):
     """Runtime state storage."""
 
-    def __init__(self):
-        self.tasks: Dict[str, TaskExpanded] = {}
+    tasks: Dict[str, TaskExpanded] = Field(default_factory=dict)
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def get_scoped_context(self, current_task_id: str) -> dict:
         """Get immediate children as context (for LLM)."""
         children = [t for t in self.tasks.values() if t.parent_task_id == current_task_id]
-        return {"tasks": [t.to_dict(include_ai_calls=False) for t in children if t.result]}
+        return {"tasks": [t.to_dict() for t in children if t.result]}
 
     def get_context(self) -> dict:
         """Get all task results for final context."""
-        return {
-            "tasks": [t.to_dict(include_ai_calls=False) for t in self.tasks.values() if t.result]
-        }
+        return {"tasks": [t.to_dict() for t in self.tasks.values() if t.result]}

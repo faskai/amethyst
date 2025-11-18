@@ -44,6 +44,9 @@ secrets: # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
   PIPEDREAM_CLIENT_SECRET: /copilot/applications/fask-svcs/pipedream-client-secret
   PIPEDREAM_PROJECT_ID: /copilot/applications/fask-svcs/pipedream-project-id
   PIPEDREAM_PROJECT_ENVIRONMENT: /copilot/applications/fask-svcs/pipedream-project-environment
+  PGPASSWORD: /copilot/applications/fask-svcs/pgpassword
+  PGHOST: /copilot/applications/fask-svcs/pghost
+  PGDATABASE: /copilot/applications/fask-svcs/pgdatabase
 # You can override any of the values defined above by environment.
 #environments:
 #  test:

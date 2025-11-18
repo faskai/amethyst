@@ -44,7 +44,7 @@ from dotenv import load_dotenv
 from .app import App
 from .hydrator import ResourceHydrator
 from .interpreter import Interpreter
-from .memory import Memory, TaskExpanded, TaskType
+from .memory import TaskExpanded, TaskType
 from .planner import Planner
 from .providers.pipedream import PipedreamProvider
 
@@ -56,7 +56,6 @@ class EngineContext:
     """Execution context passed through engine methods."""
 
     app: App
-    interpreter: Interpreter
     mcp_tools: List[Dict[str, Any]] = field(default_factory=list)
 
 
@@ -67,12 +66,17 @@ class Engine:
     Planner → Interpreter → Executor
     """
 
-    def __init__(self, send_update: Callable, verbose: bool = False):
+    def __init__(
+        self,
+        send_update: Optional[Callable] = None,
+        save_app: Optional[Callable] = None,
+        verbose: bool = False,
+    ):
         load_dotenv()
 
-        self.memory = Memory()
         self.verbose = verbose
-        self.send_update = send_update
+        self.send_update = send_update or (lambda x: None)
+        self.save_app = save_app or (lambda: None)
         self.provider = None
         self.planner = None
         self.hydrator = ResourceHydrator()
@@ -80,7 +84,7 @@ class Engine:
         if verbose:
             logging.basicConfig(level=logging.INFO)
 
-    async def run(self, app: App) -> dict:
+    async def run(self, app: App, run_id: str) -> dict:
         """Run Amethyst app with multiple files."""
 
         # Initialize provider and planner with workspace_id from app
@@ -109,22 +113,22 @@ class Engine:
 
             context = EngineContext(
                 app=app,
-                interpreter=Interpreter(send_update=self.send_update, verbose=self.verbose),
-                mcp_tools=self.provider.get_execution_mcp_config(list(app.resources.values())),
+                mcp_tools=self.provider.get_execution_mcp_config(app.resources),
             )
 
             is_agent = main_resource.type == "amt_agent"
-            main_task = await self._create_task(
-                None, main_resource.name, TaskType.AMT_AGENT if is_agent else TaskType.AMT_FUNCTION
-            )
+            task_type = TaskType.AMT_AGENT if is_agent else TaskType.AMT_FUNCTION
+            main_task = await self._create_task(context, run_id, main_resource.name, task_type)
             await self._execute_task(main_task, context)
 
             self.send_update({"type": "progress", "message": f"Completed file {idx}"})
+            self.save_app()
 
         self.send_update({"type": "progress", "message": "App execution completed"})
 
     async def _create_task(
         self,
+        context: EngineContext,
         parent_task_id: str,
         resource_name: str,
         task_type: TaskType,
@@ -136,7 +140,7 @@ class Engine:
             task_type=task_type,
             input=input or {},
         )
-        self.memory.tasks[task.id] = task
+        context.app.memory.tasks[task.id] = task
         self.send_update({"type": "task_created", "task": task.to_dict()})
         return task
 
@@ -153,12 +157,13 @@ class Engine:
         code: str,
         parent_task: TaskExpanded,
         context: EngineContext,
+        interpreter: Interpreter,
     ):
-        mem_context = self.memory.get_scoped_context(parent_task.id)
-        output, ai_call = await context.interpreter.interpret(
+        mem_context = context.app.memory.get_scoped_context(parent_task.id)
+        output, ai_call = await interpreter.interpret(
             code,
             mem_context,
-            context.app.list_resources_as_dict(),
+            [r.model_dump() for r in context.app.resources],
             context.mcp_tools,
             parent_task.id,
             parent_task.input,
@@ -180,6 +185,7 @@ class Engine:
 
         # Task call - create and execute child task
         child_task = await self._create_task(
+            context,
             parent_task.id,
             output.task.resource_name,
             TaskType(output.task.task_type),
@@ -190,6 +196,8 @@ class Engine:
         return child_task
 
     async def _execute_agent(self, agent_task: TaskExpanded, context: EngineContext):
+        interpreter: Interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
+
         # Find agent definition
         agent_def = next(
             r for r in context.app.resources_expanded if r.name == agent_task.resource_name
@@ -198,9 +206,7 @@ class Engine:
         # Loop until agent completes
         while True:
             child_task = await self._interpret_and_execute(
-                agent_def.code,
-                agent_task,
-                context,
+                agent_def.code, agent_task, context, interpreter
             )
             if child_task is None:  # Agent completed
                 return agent_task
@@ -219,7 +225,7 @@ class Engine:
                     stmt_task = await self._execute_statement(
                         stmt.text,
                         func_task,
-                        context=context,
+                        context,
                         is_parallel=stmt.is_parallel,
                     )
                     if not stmt.is_parallel:
@@ -237,7 +243,7 @@ class Engine:
                         stmt_task = await self._execute_statement(
                             stmt.text,
                             func_task,
-                            context=context,
+                            context,
                             input=item,
                             is_parallel=stmt.is_parallel,
                         )
@@ -248,13 +254,13 @@ class Engine:
                 # Wait for all async tasks with same parent_task_id
                 async_tasks = [
                     t.async_task
-                    for t in self.memory.tasks.values()
+                    for t in context.app.memory.tasks.values()
                     if t.parent_task_id == func_task.id and t.async_task
                 ]
                 if async_tasks:
                     await asyncio.gather(*async_tasks)
                     # Collect results from async tasks
-                    for t in self.memory.tasks.values():
+                    for t in context.app.memory.tasks.values():
                         if t.parent_task_id == func_task.id and t.async_task and t.result:
                             results.append(t.result)
 
@@ -270,6 +276,8 @@ class Engine:
         is_parallel: bool = False,
     ):
         """Execute statement - creates statement task and executes (sync or async)."""
+        interpreter: Interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
+
         prefix = "parallel " if is_parallel else ""
         self.send_update(
             {"type": "progress", "message": f"Executing {prefix}statement {statement}"}
@@ -277,12 +285,12 @@ class Engine:
 
         # Create statement task
         stmt_task = await self._create_task(
-            parent_task.id, "", TaskType.STATEMENT, {"input": input} if input else {}
+            context, parent_task.id, "", TaskType.STATEMENT, {"input": input} if input else {}
         )
 
         # Execute statement
         async def execute():
-            await self._interpret_and_execute(statement, stmt_task, context)
+            await self._interpret_and_execute(statement, stmt_task, context, interpreter)
 
         if is_parallel:
             stmt_task.async_task = asyncio.create_task(execute())

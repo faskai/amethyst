@@ -54,15 +54,19 @@ class Interpreter:
     ) -> tuple[InterpreterOutput, AiCall]:
         """Interpret code and return (output, ai_call)."""
 
-        user_msg = {
+        user_msg_1 = {
             "role": "user",
             "content": f"""{AMT_INTERPRETER_INSTRUCTIONS}
 
-Context:
-{json.dumps(memory, indent=2)}
-
 Resources:
 {json.dumps(resources, indent=2)}
+""",
+        }
+
+        user_msg_2 = {
+            "role": "user",
+            "content": f"""Context:
+{json.dumps(memory, indent=2)}
 
 Code:
 {code}
@@ -73,7 +77,7 @@ Input:
         }
 
         response, ai_call = await self.llm.stream(
-            messages=[user_msg, *self.messages],
+            messages=[user_msg_1, *self.messages, user_msg_2],
             text_format=InterpreterOutput,
             tools=mcp_tools,
         )

@@ -1,9 +1,10 @@
 """Amethyst app and resource types."""
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from .memory import Memory
 
 
 class Statement(BaseModel):
@@ -39,22 +40,20 @@ class ResourceExpanded(Resource):
     auth_url: Optional[str] = None
 
 
-@dataclass
-class AmtFile:
+class AmtFile(BaseModel):
     """AMT file containing Amethyst code."""
 
     content: str
 
 
-@dataclass
-class App:
+class App(BaseModel):
     """Application containing multiple AMT files and resources."""
 
-    files: List[AmtFile]
-    resources: Dict[str, Resource] = field(default_factory=dict)
-    resources_expanded: List[ResourceExpanded] = field(default_factory=list)
+    files: List[AmtFile] = []
+    resources: List[Resource] = []
+    resources_expanded: List[ResourceExpanded] = []
     workspaceId: str = ""
+    memory: Memory = Field(default_factory=Memory)
 
-    def list_resources_as_dict(self) -> List[Dict]:
-        """Serialize resources to dicts for JSON output."""
-        return [r.model_dump() for r in self.resources.values()]
+    class Config:
+        arbitrary_types_allowed = True

@@ -101,6 +101,6 @@ class Planner:
         # Create lightweight Resource objects for non-main resources (sent to interpreter LLM)
         for res in app.resources_expanded:
             if not res.is_main:
-                app.resources[res.name] = Resource(
-                    type=res.type, name=res.name, provider=res.provider, key=res.key
+                app.resources.append(
+                    Resource(type=res.type, name=res.name, provider=res.provider, key=res.key)
                 )
