@@ -49,25 +49,44 @@ class LLM:
             return result, ai_call
 
     def _serialize_output(self, output: Any) -> dict:
-        """Convert output object to JSON-serializable dict."""
-        if hasattr(output, "model_dump"):
-            # Pydantic models
-            return output.model_dump()
-        elif hasattr(output, "__dict__"):
-            # Plain objects - recursively serialize
-            result = {}
-            for key, value in output.__dict__.items():
-                if key.startswith("_"):
-                    continue
-                try:
-                    # Test if value is JSON serializable
-                    import json
+        """Extract minimal common fields showing main content."""
+        result = {}
 
-                    json.dumps(value)
-                    result[key] = value
-                except (TypeError, ValueError):
-                    # Not serializable, convert to string representation
-                    result[key] = str(value)
-            return result
-        else:
-            return {"value": str(output)}
+        # type is universal across all output types
+        if hasattr(output, "type"):
+            result["type"] = str(output.type)
+
+        # Extract main content based on type
+        # Messages and reasoning have content array
+        if hasattr(output, "content") and output.content:
+            # Extract text from content array
+            text_parts = []
+            for item in output.content:
+                if hasattr(item, "text"):
+                    text_parts.append(str(item.text))
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            if text_parts:
+                result["content"] = " ".join(text_parts)
+
+        # Tool calls have name
+        if hasattr(output, "name"):
+            result["name"] = str(output.name)
+
+        # Tool results have output
+        if hasattr(output, "output"):
+            output_val = output.output
+            if isinstance(output_val, str):
+                result["output"] = output_val[:200]  # Truncate long outputs
+            elif output_val is not None:
+                result["output"] = str(output_val)[:200]
+
+        # Errors
+        if hasattr(output, "error"):
+            error = output.error
+            if isinstance(error, dict):
+                result["error"] = error.get("message", str(error))
+            elif error:
+                result["error"] = str(error)
+
+        return result

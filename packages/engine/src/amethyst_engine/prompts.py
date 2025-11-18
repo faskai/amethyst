@@ -91,8 +91,10 @@ Output format (one of):
 - For agent call: {"task": {"resource_name": "agent_name", "task_type": "amt_agent", "input": "[{...}, {...}]"}}
 - For completion: {"result": {"result": "final text"}}
 
-CRITICAL for function/agent call input field:
-- Must be a valid JSON array with NO extra text
-- All objects in array must have identical keys (homogeneous structure)
-- Example: [{"page": "doc1"}, {"page": "doc2"}] NOT [{"page": "doc1"}, {"list": ["x"]}]
+CRITICAL:
+- Do not use any amethyst resource that is not mentioned in the code.
+- For function/agent call input field:
+-- Must be a valid JSON array with NO extra text
+-- All objects in array must have identical keys (homogeneous structure)
+-- Example: [{"page": "doc1"}, {"page": "doc2"}] NOT [{"page": "doc1"}, {"list": ["x"]}]
 """
