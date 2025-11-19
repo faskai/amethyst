@@ -22,71 +22,57 @@ class LLM:
     async def stream(
         self,
         messages: List[Dict[str, str]],
-        text_format: Type[BaseModel],
+        text_format: Optional[Type[BaseModel]] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         model: str = "gpt-5-mini",
     ) -> tuple[Any, AiCall]:
         """Stream LLM response and return (final_result, ai_call)."""
-        ai_call = AiCall(input_messages=messages.copy())
+        # Serialize input messages (may contain OpenAI response objects)
+        serialized_input = [
+            self._serialize_output(msg) if not isinstance(msg, dict) else msg for msg in messages
+        ]
+        ai_call = AiCall(input_messages=serialized_input)
+        params = {"model": model, "tools": tools or [], "input": messages}
+        if text_format:
+            params["text_format"] = text_format
 
-        async with self.client.responses.stream(
-            model=model, tools=tools or [], input=messages, text_format=text_format
-        ) as stream:
+        async with self.client.responses.stream(**params) as stream:
             if self.send_update:
                 async for event in stream:
-                    # Send only delta to UI ephemerally
-                    if hasattr(event, "delta"):
-                        self.send_update({"type": "ai_intermediate_output", "delta": event.delta})
+                    if delta := getattr(event, "delta", None):
+                        self.send_update({"type": "ai_intermediate_output", "delta": delta})
 
             result = await stream.get_final_response()
 
-            # Capture intermediate outputs array as JSON-serializable dicts
-            if hasattr(result, "output") and result.output:
-                ai_call.intermediate_outputs = [
-                    self._serialize_output(output) for output in result.output
-                ]
+            ai_call.intermediate_outputs = [
+                self._serialize_output(output) for output in getattr(result, "output", [])
+            ]
 
             return result, ai_call
 
     def _serialize_output(self, output: Any) -> dict:
-        """Extract minimal common fields showing main content."""
+        """Extract main string fields from output."""
         result = {}
 
-        # type is universal across all output types
-        if hasattr(output, "type"):
-            result["type"] = str(output.type)
+        string_fields = [
+            "type",
+            "name",
+            "output",
+            "error",
+            "status",
+            "id",
+            "role",
+            "server_label",
+            "arguments",
+            "summary",
+        ]
+        for field in string_fields:
+            if val := getattr(output, field, None):
+                result[field] = str(val)
 
-        # Extract main content based on type
-        # Messages and reasoning have content array
-        if hasattr(output, "content") and output.content:
-            # Extract text from content array
-            text_parts = []
-            for item in output.content:
-                if hasattr(item, "text"):
-                    text_parts.append(str(item.text))
-                elif isinstance(item, str):
-                    text_parts.append(item)
+        if content := getattr(output, "content", None):
+            text_parts = [str(item.text) for item in content]
             if text_parts:
                 result["content"] = " ".join(text_parts)
-
-        # Tool calls have name
-        if hasattr(output, "name"):
-            result["name"] = str(output.name)
-
-        # Tool results have output
-        if hasattr(output, "output"):
-            output_val = output.output
-            if isinstance(output_val, str):
-                result["output"] = output_val[:200]  # Truncate long outputs
-            elif output_val is not None:
-                result["output"] = str(output_val)[:200]
-
-        # Errors
-        if hasattr(output, "error"):
-            error = output.error
-            if isinstance(error, dict):
-                result["error"] = error.get("message", str(error))
-            elif error:
-                result["error"] = str(error)
 
         return result

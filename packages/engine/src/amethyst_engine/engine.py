@@ -34,7 +34,6 @@ end agent
 """
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
@@ -132,13 +131,13 @@ class Engine:
         parent_task_id: str,
         resource_name: str,
         task_type: TaskType,
-        input: Optional[dict] = None,
+        input: Optional[List[Dict[str, Any]]] = None,
     ):
         task = TaskExpanded(
             parent_task_id=parent_task_id,
             resource_name=resource_name,
             task_type=task_type,
-            input=input or {},
+            input=input or [],
         )
         context.app.memory.tasks[task.id] = task
         self.send_update({"type": "task_created", "task": task.to_dict()})
@@ -159,11 +158,9 @@ class Engine:
         context: EngineContext,
         interpreter: Interpreter,
     ):
-        mem_context = context.app.memory.get_scoped_context(parent_task.id)
         output, ai_call = await interpreter.interpret(
             code,
-            mem_context,
-            [r.model_dump() for r in context.app.resources],
+            context.app,
             context.mcp_tools,
             parent_task.id,
             parent_task.input,
@@ -177,20 +174,16 @@ class Engine:
 
         if output.result:
             # Completion - update parent result
-            parent_task.result = output.result.result
+            parent_task.result = output.result
             self.send_update(
                 {"type": "task_updated", "task": parent_task.to_dict(include_ai_calls=True)}
             )
             return None
 
-        # Task call - create and execute child task
-        child_task = await self._create_task(
-            context,
-            parent_task.id,
-            output.task.resource_name,
-            TaskType(output.task.task_type),
-            {"input": json.loads(output.task.input)} if output.task.input else {},
-        )
+        # Task call - convert to TaskExpanded and execute
+        child_task = TaskExpanded(**output.task.model_dump())
+        context.app.memory.tasks[child_task.id] = child_task
+        self.send_update({"type": "task_created", "task": child_task.to_dict()})
         await self._execute_task(child_task, context)
 
         return child_task
@@ -216,7 +209,7 @@ class Engine:
         func_def = next(
             r for r in context.app.resources_expanded if r.name == func_task.resource_name
         )
-        input_data = func_task.input.get("input", [])
+        input_data = func_task.input
         results = []
 
         for block in func_def.blocks:
@@ -276,7 +269,6 @@ class Engine:
         is_parallel: bool = False,
     ):
         """Execute statement - creates statement task and executes (sync or async)."""
-        interpreter: Interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
 
         prefix = "parallel " if is_parallel else ""
         self.send_update(
@@ -285,8 +277,10 @@ class Engine:
 
         # Create statement task
         stmt_task = await self._create_task(
-            context, parent_task.id, "", TaskType.STATEMENT, {"input": input} if input else {}
+            context, parent_task.id, "", TaskType.STATEMENT, [input] if input else []
         )
+
+        interpreter: Interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
 
         # Execute statement
         async def execute():

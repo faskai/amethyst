@@ -75,26 +75,24 @@ Return as ResourceExpanded array:
 
 AMT_INTERPRETER_INSTRUCTIONS = """Interpret Amethyst code and execute it.
 
-Given code (agent block or single statement) and previous task results, execute it.
+Given code (agent block or single statement), execute it using MCP tools and Amethyst resources.
 
 Rules:
-- For an agent block you need to call resources to perform tasks.
-- Iterate with MCP tools internally to perform the tasks.
-- Retry MCP tools if they fail, try different tools and parameters to get the desired result
-- If resource is an AMT function: return task={resource_name, task_type="amt_function", input as JSON array string}
-- If resource is an AMT agent: return task={resource_name, task_type="amt_agent", input as JSON array string}
-- If MCP tool executed or agent/statement completed: return result={result text}
-- Resolve variables from task results (e.g., "item" from input in context)
+- Use MCP tools to perform tasks (e.g., google_docs, file operations)
+- Iterate with MCP tools internally - retry if they fail with different parameters
+- When you need to call an Amethyst function or agent, use the call_amt_resource function
+- After calling call_amt_resource, the result will be provided and you can continue
+- When task is complete, respond with the final result text as a regular message
 
-Output format (one of):
-- For function call: {"task": {"resource_name": "function_name", "task_type": "amt_function", "input": "[{...}, {...}]"}}
-- For agent call: {"task": {"resource_name": "agent_name", "task_type": "amt_agent", "input": "[{...}, {...}]"}}
-- For completion: {"result": {"result": "final text"}}
+To call Amethyst resources:
+- Use call_amt_resource function with resource_name, task_type, and input
+- task_type: "amt_function" or "amt_agent"
+- input: ALWAYS provide this field as an array of objects
+  - If no input needed, use empty array: []
+  - Otherwise: [{"page": "doc1"}, {"page": "doc2"}]
+  - All objects must have identical keys
 
 CRITICAL:
-- Do not use any amethyst resource that is not mentioned in the code.
-- For function/agent call input field:
--- Must be a valid JSON array with NO extra text
--- All objects in array must have identical keys (homogeneous structure)
--- Example: [{"page": "doc1"}, {"page": "doc2"}] NOT [{"page": "doc1"}, {"list": ["x"]}]
+- Only call Amethyst resources that are explicitly mentioned in the code
+- ALWAYS include the input field, even if empty array []
 """

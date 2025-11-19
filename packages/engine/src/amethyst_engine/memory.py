@@ -27,7 +27,7 @@ class Task(BaseModel):
     parent_task_id: Optional[str] = None
     resource_name: str = ""
     task_type: TaskType = TaskType.AMT_AGENT
-    input: Dict[str, Any] = Field(default_factory=dict)
+    input: List[Dict[str, Any]] = Field(default_factory=list)
     result: Any = None
 
     def to_dict(self) -> dict:
@@ -66,11 +66,6 @@ class Memory(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-
-    def get_scoped_context(self, current_task_id: str) -> dict:
-        """Get immediate children as context (for LLM)."""
-        children = [t for t in self.tasks.values() if t.parent_task_id == current_task_id]
-        return {"tasks": [t.to_dict() for t in children if t.result]}
 
     def get_context(self) -> dict:
         """Get all task results for final context."""
