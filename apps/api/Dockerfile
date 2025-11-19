@@ -21,4 +21,4 @@ RUN poetry install --no-dev --no-root
 EXPOSE 80
 
 # Run the FastAPI app with uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--access-log", "false"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
