@@ -69,7 +69,7 @@ const readStream = async (
   return readStream(reader, decoder, remainingBuffer, callbacks);
 };
 
-export async function createAppApi(app: any, workspaceId: string = 'default') {
+export async function createAppApi(app: any, workspaceId: string = '') {
   const payload: App = {
     files: app.files.map((f: any) => ({ content: f.content })),
     resources: app.resources,

@@ -20,7 +20,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { createAppApi, getAppById, runApp as runAppApi } from '@/api/apps';
-import { searchApps } from '@/api/workflow';
+import { searchResources } from '@/api/resources';
 import Iconify from '@/components/iconify';
 import type { MentionResource } from '@/components/mention-text-field';
 import MentionTextField from '@/components/mention-text-field';
@@ -34,6 +34,7 @@ interface Resource {
   provider: string;
   type: string;
   key?: string;
+  img_url?: string;
 }
 
 interface App {
@@ -75,7 +76,6 @@ export default function CreateEditAppView({ id }: Props) {
   });
   const [appId, setAppId] = useState<string | null>(null);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
-  const [resourceImages, setResourceImages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<string>('');
   const [oauthRequired, setOauthRequired] = useState<any>(null);
@@ -117,26 +117,12 @@ export default function CreateEditAppView({ id }: Props) {
           );
           setExpandedTasks(new Set(rootTasks.map((t) => t.id)));
         }
-
-        // Load resource images
-        const images: Record<string, string> = {};
-        appData.resources?.forEach((resource: any) => {
-          if (resource.key) {
-            // You might need to fetch the image URL from pipedream API
-            // For now, we'll just store what we have
-          }
-        });
-        setResourceImages(images);
       });
     }
   }, [id]);
 
-  const removeResource = (key: string) => {
-    setApp({ ...app, resources: app.resources.filter((r) => r.key !== key) });
-    setResourceImages((prev) => {
-      const { [key]: _, ...rest } = prev;
-      return rest;
-    });
+  const removeResource = (id: string) => {
+    setApp({ ...app, resources: app.resources.filter((r) => r.id !== id) });
   };
 
   const addFile = () => {
@@ -296,7 +282,7 @@ export default function CreateEditAppView({ id }: Props) {
       // Create app if not exists
       let currentAppId: string;
       if (!appId) {
-        const result = await createAppApi(app, 'default');
+        const result = await createAppApi(app);
         currentAppId = result.id;
         setAppId(currentAppId);
       } else {
@@ -396,11 +382,11 @@ export default function CreateEditAppView({ id }: Props) {
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {app.resources.map((resource, idx) => (
                 <Chip
-                  key={`${resource.key}-${idx}`}
+                  key={`${resource.id}-${idx}`}
                   avatar={
-                    resource.key && resourceImages[resource.key] ? (
+                    resource.img_url ? (
                       <Avatar
-                        src={resourceImages[resource.key]}
+                        src={resource.img_url}
                         alt={resource.name}
                         sx={{ width: 32, height: 32 }}
                         imgProps={{ style: { objectFit: 'contain' } }}
@@ -408,7 +394,7 @@ export default function CreateEditAppView({ id }: Props) {
                     ) : undefined
                   }
                   label={resource.name}
-                  onDelete={() => removeResource(resource.key!)}
+                  onDelete={() => removeResource(resource.id!)}
                   color="primary"
                   variant="outlined"
                 />
@@ -493,49 +479,40 @@ export default function CreateEditAppView({ id }: Props) {
                 value={app.files[selectedFileIndex]?.content || ''}
                 onChange={(content) => updateFileContent(selectedFileIndex, content)}
                 onSearch={async (query: string) => {
-                  const results = await searchApps(query);
-                  return results.map((r: PipedreamApp) => ({
-                    id: r.name_slug,
+                  const results = await searchResources(query);
+                  return results.map((r: any) => ({
+                    id: r.id,
                     name: r.name,
-                    key: r.name_slug,
-                    type: 'tool',
-                    provider: 'pipedream',
-                    img_src: r.img_src,
+                    type: r.type,
+                    provider: r.provider,
+                    img_src: r.img_url,
                   }));
                 }}
                 onResourceSelect={(resource: MentionResource) => {
                   // Add to resources if not already there
-                  if (!app.resources.some((r) => r.key === resource.key)) {
+                  if (!app.resources.some((r) => r.id === resource.id)) {
                     setApp({
                       ...app,
                       resources: [
                         ...app.resources,
                         {
                           name: resource.name,
-                          key: resource.key!,
+                          id: resource.id!,
                           provider: resource.provider || 'pipedream',
                           type: resource.type || 'tool',
+                          img_url: resource.img_src,
                         },
                       ],
                     });
-                    if (resource.img_src) {
-                      setResourceImages((prev) => ({
-                        ...prev,
-                        [resource.key!]: resource.img_src!,
-                      }));
-                    }
                   }
                 }}
-                getImageUrl={(resource: MentionResource) =>
-                  resource.key ? resourceImages[resource.key] : undefined
-                }
+                getImageUrl={(resource: MentionResource) => resource.img_src}
                 existingResources={app.resources.map((r) => ({
-                  id: r.key || '',
+                  id: r.id || '',
                   name: r.name,
-                  key: r.key,
                   type: r.type,
                   provider: r.provider,
-                  img_src: r.key ? resourceImages[r.key] : undefined,
+                  img_src: r.img_url,
                 }))}
                 placeholder="Write your Amethyst code here... (type 'use @app_name' to search and add other apps)"
               />
@@ -882,9 +859,9 @@ export default function CreateEditAppView({ id }: Props) {
                   rel="noopener noreferrer"
                   fullWidth
                   startIcon={
-                    resource.key && resourceImages[resource.key] ? (
+                    resource.img_url ? (
                       <Avatar
-                        src={resourceImages[resource.key]}
+                        src={resource.img_url}
                         alt={resource.name}
                         sx={{ width: 24, height: 24 }}
                       />

@@ -47,6 +47,7 @@ Return as ResourceExpanded array:
 {
   "resources": [
     {
+      "id": "bulk_summz",
       "name": "bulk_summz",
       "type": "amt_agent",
       "provider": "amethyst",
@@ -55,6 +56,7 @@ Return as ResourceExpanded array:
       "blocks": []
     },
     {
+      "id": "doc_summz",
       "name": "doc_summz",
       "type": "amt_function",
       "provider": "amethyst",
@@ -78,9 +80,9 @@ AMT_INTERPRETER_INSTRUCTIONS = """Interpret Amethyst code and execute it.
 Given code (agent block or single statement), execute it using MCP tools and Amethyst resources.
 
 Rules:
-- Use MCP tools to perform tasks (e.g., google_docs, file operations)
+- Use MCP tools to perform tasks (e.g., google_docs, file operations) (only if provider is pipedream)
 - Iterate with MCP tools internally - retry if they fail with different parameters
-- When you need to call an Amethyst function or agent, use the call_amt_resource function
+- When you need to call an Amethyst function or agent (only when provider is amethyst), use the call_amt_resource function
 - After calling call_amt_resource, the result will be provided and you can continue
 - When task is complete, respond with the final result text as a regular message
 
@@ -93,6 +95,7 @@ To call Amethyst resources:
   - All objects must have identical keys
 
 CRITICAL:
-- Only call Amethyst resources that are explicitly mentioned in the code
+- Only call resources that are explicitly mentioned in the code
+- Make sure to check resource.provider to decide whether to use MCP internaly or call_amt_resource
 - ALWAYS include the input field, even if empty array []
 """

@@ -6,5 +6,8 @@ export const paths = {
     create: '/apps/create',
     details: (id: string) => `/apps/${id}`,
   },
+  resources: {
+    root: '/resources',
+  },
 };
 

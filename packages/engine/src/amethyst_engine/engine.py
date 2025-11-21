@@ -83,29 +83,35 @@ class Engine:
         if verbose:
             logging.basicConfig(level=logging.INFO)
 
-    async def run(self, app: App, run_id: str) -> dict:
-        """Run Amethyst app with multiple files."""
-
+    async def plan(self, app: App) -> App:
+        """Plan Amethyst app - parse files and enrich resources."""
         # Initialize provider and planner with workspace_id from app
         self.provider = PipedreamProvider(workspace_id=app.workspaceId, verbose=self.verbose)
         self.planner = Planner(self.provider, send_update=self.send_update, verbose=self.verbose)
 
         for idx, amt_file in enumerate(app.files, 1):
             self.send_update(
-                {"type": "progress", "message": f"Parsing file {idx}/{len(app.files)}"}
+                {"type": "progress", "message": f"Planning file {idx}/{len(app.files)}"}
             )
-
             await self.planner.parse(amt_file, app)
 
-            needs_oauth = [
-                r for r in app.resources_expanded if r.connection_status == "needs_oauth"
-            ]
+        self.send_update({"type": "progress", "message": "Planning completed"})
+        return app
+
+    async def run(self, app: App, run_id: str) -> dict:
+        """Execute already-planned Amethyst app."""
+        # Initialize provider for execution
+        self.provider = PipedreamProvider(workspace_id=app.workspaceId, verbose=self.verbose)
+
+        for idx in range(len(app.files)):
+            # Check OAuth requirements
+            needs_oauth = [r for r in app.resources if r.connection_status == "needs_oauth"]
             if needs_oauth:
                 needs_oauth_dict = [r.model_dump() for r in needs_oauth]
                 self.send_update({"type": "oauth_required", "resources": needs_oauth_dict})
                 return {"status": "oauth_required", "resources": needs_oauth_dict}
 
-            main_resource = next(r for r in app.resources_expanded if r.is_main)
+            main_resource = next(r for r in app.resources if r.is_main)
             self.send_update(
                 {"type": "progress", "message": f"Executing main: {main_resource.name}"}
             )
@@ -120,7 +126,7 @@ class Engine:
             main_task = await self._create_task(context, run_id, main_resource.name, task_type)
             await self._execute_task(main_task, context)
 
-            self.send_update({"type": "progress", "message": f"Completed file {idx}"})
+            self.send_update({"type": "progress", "message": f"Completed file {idx + 1}"})
             self.save_app()
 
         self.send_update({"type": "progress", "message": "App execution completed"})
@@ -192,9 +198,7 @@ class Engine:
         interpreter: Interpreter = Interpreter(send_update=self.send_update, verbose=self.verbose)
 
         # Find agent definition
-        agent_def = next(
-            r for r in context.app.resources_expanded if r.name == agent_task.resource_name
-        )
+        agent_def = next(r for r in context.app.resources if r.name == agent_task.resource_name)
 
         # Loop until agent completes
         while True:
@@ -206,9 +210,7 @@ class Engine:
 
     async def _execute_function(self, func_task: TaskExpanded, context: EngineContext):
         """Execute function blocks (sequence, repeat, wait)."""
-        func_def = next(
-            r for r in context.app.resources_expanded if r.name == func_task.resource_name
-        )
+        func_def = next(r for r in context.app.resources if r.name == func_task.resource_name)
         input_data = func_task.input
         results = []
 

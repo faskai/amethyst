@@ -7,8 +7,3 @@ export const amethystApiPath =
     ? 'http://localhost:8000'
     : 'https://amethyst.test.fask-svcs.faskai.com';
 
-export const wfApiPath =
-  process.env.NEXT_PUBLIC_WF_API_ENV === 'dev'
-    ? 'http://localhost:81'
-    : 'https://workflow.test.fask-svcs.faskai.com';
-

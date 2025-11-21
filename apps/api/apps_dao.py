@@ -1,7 +1,7 @@
 """App persistence DAO."""
 
-import json
 import os
+from datetime import datetime
 from uuid import uuid4
 
 import psycopg2
@@ -20,19 +20,20 @@ def get_db_connection():
 
 # CREATE TABLE app (
 #   id VARCHAR(50) PRIMARY KEY,
-#   json_obj JSONB
+#   json_obj JSONB,
+#   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 # );
 
 
-def create_app(json_obj: dict) -> str:
+def create_app(json_str: str, updated_at: datetime) -> str:
     """Insert new app."""
     app_id = str(uuid4())
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO app (id, json_obj) VALUES (%s, %s)",
-                (app_id, json.dumps(json_obj)),
+                "INSERT INTO app (id, json_obj, updated_at) VALUES (%s, %s, %s)",
+                (app_id, json_str, updated_at),
             )
             conn.commit()
         return app_id
@@ -52,14 +53,14 @@ def get_app(app_id: str) -> dict:
         conn.close()
 
 
-def update_app(app_id: str, json_obj: dict):
+def update_app(app_id: str, json_str: str, updated_at: datetime):
     """Update app."""
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE app SET json_obj = %s WHERE id = %s",
-                (json.dumps(json_obj), app_id),
+                "UPDATE app SET json_obj = %s, updated_at = %s WHERE id = %s",
+                (json_str, updated_at, app_id),
             )
             conn.commit()
     finally:
@@ -67,11 +68,11 @@ def update_app(app_id: str, json_obj: dict):
 
 
 def list_apps() -> list:
-    """List all apps."""
+    """List all apps sorted by updated_at DESC."""
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id, json_obj FROM app ORDER BY id DESC")
+            cur.execute("SELECT id, json_obj FROM app ORDER BY updated_at DESC")
             rows = cur.fetchall()
             return (
                 [{"id": row["id"], **row["json_obj"]} for row in rows] if rows else []

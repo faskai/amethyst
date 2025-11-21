@@ -1,5 +1,6 @@
 """Amethyst app and resource types."""
 
+from datetime import datetime
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -21,13 +22,19 @@ class AmtBlock(BaseModel):
     statements: List[Statement] = []
 
 
-class Resource(BaseModel):
+class ResourceLite(BaseModel):
     """Lightweight resource for interpreter (sent to LLM)."""
 
     type: str
     name: str
     provider: str
-    key: Optional[str] = None
+    id: Optional[str] = None
+
+
+class Resource(ResourceLite):
+    """Lightweight resource for interpreter (sent to LLM)."""
+
+    img_url: Optional[str] = None
 
 
 class ResourceExpanded(Resource):
@@ -39,6 +46,9 @@ class ResourceExpanded(Resource):
     connection_status: Optional[str] = None
     auth_url: Optional[str] = None
 
+    def to_lite(self) -> ResourceLite:
+        return ResourceLite(type=self.type, name=self.name, provider=self.provider, id=self.id)
+
 
 class AmtFile(BaseModel):
     """AMT file containing Amethyst code."""
@@ -47,13 +57,14 @@ class AmtFile(BaseModel):
 
 
 class App(BaseModel):
-    """Application containing multiple AMT files and resources."""
-
     files: List[AmtFile] = []
-    resources: List[Resource] = []
-    resources_expanded: List[ResourceExpanded] = []
+    resource_ids: List[str] = []
     workspaceId: str = ""
     memory: Memory = Field(default_factory=Memory)
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        arbitrary_types_allowed = True
+
+class AppExpanded(App):
+    """Application containing multiple AMT files and resources."""
+
+    resources: List[ResourceExpanded] = []

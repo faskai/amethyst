@@ -159,7 +159,7 @@ class Interpreter:
             "content": f"""{AMT_INTERPRETER_INSTRUCTIONS}
 
 Resources:
-{json.dumps([r.model_dump() for r in app.resources], indent=2)}
+{json.dumps([r.to_lite().model_dump() for r in app.resources if not r.is_main], indent=2)}
 
 Code:
 {code}

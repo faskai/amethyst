@@ -5,7 +5,7 @@ from typing import Callable, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from .app import AmtBlock, Resource, ResourceExpanded, Statement
+from .app import AmtBlock, ResourceExpanded, Statement
 from .llm import LLM
 from .prompts import AMT_PARSER_INSTRUCTIONS
 
@@ -33,6 +33,7 @@ class ParsedResource(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    id: str
     name: str
     type: Literal["amt_agent", "amt_function"]
     is_main: bool
@@ -58,7 +59,7 @@ class Planner:
         self.verbose = verbose
 
     async def parse(self, amt_file, app):
-        """Parse AMT code into app.resources_expanded."""
+        """Parse AMT code and add to app.resources."""
 
         prompt = f"{AMT_PARSER_INSTRUCTIONS}\n\nAMT Code:\n{amt_file.content}"
         messages = [{"role": "user", "content": prompt}]
@@ -69,8 +70,7 @@ class Planner:
         if self.verbose:
             print(f"\n🤖 PARSER: {json.dumps(response.output_parsed.model_dump(), indent=2)}\n")
 
-        # Map ParsedResource to ResourceExpanded
-        app.resources_expanded = []
+        # Map ParsedResource to ResourceExpanded and add/update in app.resources
         for parsed_res in response.output_parsed.resources:
             # Convert ParsedBlock to AmtBlock
             blocks = [
@@ -86,6 +86,7 @@ class Planner:
 
             # Create ResourceExpanded
             resource_expanded = ResourceExpanded(
+                id=parsed_res.id,
                 name=parsed_res.name,
                 type=parsed_res.type,
                 provider="amethyst",
@@ -93,14 +94,17 @@ class Planner:
                 code=parsed_res.code,
                 blocks=blocks,
             )
-            app.resources_expanded.append(resource_expanded)
+
+            # Check if resource with this ID already exists
+            existing_idx = next(
+                (i for i, r in enumerate(app.resources) if r.id == parsed_res.id), None
+            )
+            if existing_idx is not None:
+                # Update existing resource
+                app.resources[existing_idx] = resource_expanded
+            else:
+                # Add new resource
+                app.resources.append(resource_expanded)
 
         # Enrich with provider-specific metadata (e.g., Pipedream connection status)
-        self.provider.enrich_resources(app.resources_expanded)
-
-        # Create lightweight Resource objects for non-main resources (sent to interpreter LLM)
-        for res in app.resources_expanded:
-            if not res.is_main:
-                app.resources.append(
-                    Resource(type=res.type, name=res.name, provider=res.provider, key=res.key)
-                )
+        self.provider.enrich_resources(app.resources)

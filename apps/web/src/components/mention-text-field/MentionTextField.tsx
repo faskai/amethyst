@@ -17,7 +17,6 @@ import { alpha, useTheme } from '@mui/material/styles';
 export interface MentionResource {
   id: string;
   name: string;
-  key?: string;
   type?: string;
   provider?: string;
   img_src?: string;
@@ -54,6 +53,7 @@ export default function MentionTextField({
   const [mentionPopoverAnchor, setMentionPopoverAnchor] = useState<HTMLElement | null>(null);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const isInsertingRef = useRef(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getImageUrlForResource = useCallback(
     (resource: MentionResource): string | undefined => {
@@ -80,8 +80,8 @@ export default function MentionTextField({
         parts.push({ text: text.slice(lastIndex, match.index), isMention: false });
       }
 
-      const key = match[1];
-      const resource = existingResources.find((r) => r.key === key);
+      const id = match[1];
+      const resource = existingResources.find((r) => r.id === id);
       parts.push({
         text: match[0],
         isMention: true,
@@ -105,7 +105,7 @@ export default function MentionTextField({
       if (part.isMention && part.resource) {
         const span = document.createElement('span');
         span.textContent = part.text;
-        span.setAttribute('data-key', part.resource.key || '');
+        span.setAttribute('data-id', part.resource.id || '');
         span.setAttribute('data-name', part.resource.name);
         span.style.cssText = `
           color: ${theme.palette.primary.main};
@@ -197,6 +197,14 @@ export default function MentionTextField({
 
           if (queryMatch && queryMatch[1].length > 0) {
             const query = queryMatch[1];
+            
+            // Clear existing timeout
+            if (searchTimeoutRef.current) {
+              clearTimeout(searchTimeoutRef.current);
+            }
+            
+            // Debounce search - wait 300ms after user stops typing
+            searchTimeoutRef.current = setTimeout(async () => {
             try {
               const results = await onSearch(query);
               if (results && results.length > 0) {
@@ -207,18 +215,19 @@ export default function MentionTextField({
                 const rangeClone = range.cloneRange();
                 rangeClone.collapse(false);
                 const rect = rangeClone.getBoundingClientRect();
-                const editorRect = editorRef.current.getBoundingClientRect();
+                  const editorRect = editorRef.current!.getBoundingClientRect();
 
                 setDropdownPosition({
-                  top: rect.bottom - editorRect.top + editorRef.current.scrollTop + 4,
-                  left: rect.left - editorRect.left + editorRef.current.scrollLeft,
+                    top: rect.bottom - editorRect.top + editorRef.current!.scrollTop + 4,
+                    left: rect.left - editorRect.left + editorRef.current!.scrollLeft,
                 });
                 setShowDropdown(true);
-                return;
               }
             } catch (error) {
               // Ignore search errors
             }
+            }, 300);
+            return;
           }
         }
       }
@@ -258,7 +267,7 @@ export default function MentionTextField({
       const lastAtIndex = textBeforeCursor.lastIndexOf('@');
       if (lastAtIndex === -1) return;
 
-      const mentionText = `@${resource.key || resource.name}`;
+      const mentionText = `@${resource.id || resource.name}`;
       const beforeAt = fullText.slice(0, lastAtIndex);
       const afterCursor = fullText.slice(cursorPosition);
       const newText = `${beforeAt}${mentionText} ${afterCursor}`;
@@ -273,6 +282,15 @@ export default function MentionTextField({
     },
     [onChange, onResourceSelect]
   );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -395,7 +413,7 @@ export default function MentionTextField({
                   )}
                   <ListItemText
                     primary={resource.name}
-                    secondary={resource.key}
+                    secondary={resource.id}
                     primaryTypographyProps={{
                       variant: 'body2',
                       fontWeight: 500,
@@ -437,9 +455,9 @@ export default function MentionTextField({
                 <Typography variant="body2" fontWeight={600}>
                   {clickedMention.name}
                 </Typography>
-                {clickedMention.key && (
+                {clickedMention.id && (
                   <Typography variant="caption" color="text.secondary">
-                    {clickedMention.key}
+                    {clickedMention.id}
                   </Typography>
                 )}
               </Box>

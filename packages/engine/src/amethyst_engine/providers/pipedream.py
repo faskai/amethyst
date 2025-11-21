@@ -13,7 +13,7 @@ class PipedreamProvider(ToolProvider):
     """Pipedream provider implementation."""
 
     def __init__(self, workspace_id: str, verbose: bool = False):
-        self.user_id = workspace_id
+        self.user_id = workspace_id or os.getenv("PIPEDREAM_EXTERNAL_USER_ID")
         self.project_id = os.getenv("PIPEDREAM_PROJECT_ID")
         self.project_environment = os.getenv("PIPEDREAM_PROJECT_ENVIRONMENT")
         self.client_id = os.getenv("PIPEDREAM_CLIENT_ID")
@@ -50,14 +50,14 @@ class PipedreamProvider(ToolProvider):
         return [
             {
                 "type": "mcp",
-                "server_label": r.key,
+                "server_label": r.id,
                 "server_url": "https://remote.mcp.pipedream.net",
                 "headers": {
                     "Authorization": f"Bearer {self.access_token}",
                     "x-pd-project-id": self.project_id,
                     "x-pd-environment": self.project_environment,
                     "x-pd-external-user-id": self.user_id,
-                    "x-pd-app-slug": r.key,
+                    "x-pd-app-slug": r.id,
                     "x-pd-tool-mode": "sub-agent",
                 },
                 "require_approval": "never",
@@ -70,9 +70,9 @@ class PipedreamProvider(ToolProvider):
         """Enrich ResourceExpanded objects in place with Pipedream connection status and auth URLs."""
         connect_link_base = None
         for resource in resources:
-            if resource.provider == "pipedream" and resource.key:
+            if resource.provider == "pipedream" and resource.id:
                 accounts = list(
-                    self.pd.accounts.list(external_user_id=self.user_id, app=resource.key)
+                    self.pd.accounts.list(external_user_id=self.user_id, app=resource.id)
                 )
                 if accounts:
                     resource.connection_status = "connected"
@@ -83,4 +83,4 @@ class PipedreamProvider(ToolProvider):
                             external_user_id=self.user_id
                         ).connect_link_url
                     resource.connection_status = "needs_oauth"
-                    resource.auth_url = f"{connect_link_base}&app={resource.key}"
+                    resource.auth_url = f"{connect_link_base}&app={resource.id}"

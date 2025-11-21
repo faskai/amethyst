@@ -18,7 +18,7 @@ import { paths } from '@/routes/paths';
 interface AmtApp {
   id: string;
   files: any[];
-  resources: any[];
+  resource_ids: string[];
   workspaceId: string;
 }
 
@@ -98,7 +98,7 @@ export default function AppsListView() {
                   <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Typography variant="body2" color="text.secondary">
                       {app.files.length} file{app.files.length !== 1 ? 's' : ''} •{' '}
-                      {app.resources.length} resource{app.resources.length !== 1 ? 's' : ''}
+                      {app.resource_ids.length} resource{app.resource_ids.length !== 1 ? 's' : ''}
                     </Typography>
                     <Iconify icon="eva:arrow-ios-forward-fill" width={20} />
                   </Stack>
